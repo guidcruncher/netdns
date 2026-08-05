@@ -1,7 +1,8 @@
 namespace DnsForwarder;
 
-public sealed class ServerOptions {
+public sealed class ServerOptions
+{
 
-  public DnsForwarderOptions Dns { get; set; } = new();
+    public DnsForwarderOptions Dns { get; set; } = new();
 
 }

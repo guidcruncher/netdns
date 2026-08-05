@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  dns-forwarder:
+    container_name: dns-forwarder
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+
+    # DNS uses UDP port 53
+    ports:
+      - "53:53/udp"
+
+    # Mount config so you can edit without rebuilding
+    volumes:
+      - ./appsettings.json:/app/appsettings.json:ro
+
+    # Optional: run with host networking for maximum performance
+    # network_mode: host

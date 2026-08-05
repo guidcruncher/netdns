@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Blocklists</title></head>
+<body>
+<h1>Blocklists</h1>
+
+<p>
+DnsForwarder supports blocklists from any source implementing
+<code>IBlocklistSource</code>.  
+Blocklists can contain wildcard patterns, substring rules, or full regular expressions.
+</p>
+
+<h2>Example Blocklist Entry</h2>
+<pre><code>
+adsdomain.com
+*.tracking.net
+*analytics*
+^.*badsite\.com$
+</code></pre>
+
+<h2>Inline Blocklist</h2>
+<p>
+You can load blocklists directly from memory using an inline source:
+</p>
+
+<pre><code>
+await engine.AddListAsync(
+    new InlineBlocklistSource(new[] { "adsdomain.com", "*ads*" }),
+    block: true
+);
+</code></pre>
+
+<h2>Blocklist Precedence</h2>
+<p>
+Block rules override all host wildcard rules.  
+Example:
+</p>
+
+<pre><code>
+Hosts:
+  10.0.0.5 *ads*
+
+Blocklist:
+  adsdomain.com
+</code></pre>
+
+<p>
+Querying <code>adsdomain.com</code> results in a block, not a host override.
+</p>
+
+<h2>Supported Pattern Types</h2>
+<ul>
+  <li>Exact: <code>example.com</code></li>
+  <li>Suffix wildcard: <code>*.example.com</code></li>
+  <li>Prefix wildcard: <code>example.*</code></li>
+  <li>Substring wildcard: <code>*ads*</code></li>
+  <li>Regex: <code>^.*example\.com$</code></li>
+</ul>
+
+<h2>Loading Blocklists from Files</h2>
+<pre><code>
+"Blocklists": [
+  "/etc/dnsforwarder/blocklist.txt",
+  "/opt/lists/adblock.txt"
+]
+</code></pre>
+
+</body>
+</html>

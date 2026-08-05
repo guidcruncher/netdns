@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Rule Engine</title></head>
+<body>
+<h1>Rule Engine</h1>
+
+<p>
+The RuleEngine determines which upstream resolver should handle a DNS query.
+It supports exact, prefix, suffix, substring, wildcard, and regex rules.
+</p>
+
+<h2>Example Rule</h2>
+<pre><code>
+{
+  "Name": "cloudflare",
+  "Address": "1.1.1.1",
+  "Port": 53,
+  "Rule": "*.example.com"
+}
+</code></pre>
+
+<h2>Matching Order</h2>
+<ol>
+  <li>Hosts overrides</li>
+  <li>Exact rules</li>
+  <li>Suffix rules</li>
+  <li>Prefix rules</li>
+  <li>Wildcard substring rules</li>
+  <li>Regex rules</li>
+  <li>Fallback resolvers</li>
+</ol>
+</body>
+</html>

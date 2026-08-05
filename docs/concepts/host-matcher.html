@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Host Matcher</title></head>
+<body>
+<h1>Host Matcher</h1>
+
+<p>
+HostMatcher handles host overrides from hosts files.  
+It supports exact, prefix, suffix, and substring wildcard patterns.
+</p>
+
+<h2>Examples</h2>
+
+<h3>Suffix wildcard</h3>
+<pre><code>10.0.0.1 *.example.com</code></pre>
+
+<h3>Prefix wildcard</h3>
+<pre><code>10.0.0.2 example.*</code></pre>
+
+<h3>Substring wildcard</h3>
+<pre><code>10.0.0.3 *ads*</code></pre>
+
+<h2>Specificity Rule</h2>
+<p><b>Longest core wins.</b></p>
+
+<pre><code>
+10.0.0.10 *.example.com
+10.0.0.20 *ample.com
+10.0.0.30 *ple.com
+</code></pre>
+
+<p>
+Query: <code>foo.example.com</code> → <code>10.0.0.10</code>
+</p>
+</body>
+</html>

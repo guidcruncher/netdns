@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DnsForwarder/DnsForwarder.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DnsForwarder.Tests/DnsForwarder.Tests.csproj" />
+  </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="tests/DnsForwarder.Benchmarks/DnsForwarder.Benchmarks.csproj" />
+  </Folder>
+</Solution>

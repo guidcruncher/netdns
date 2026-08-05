@@ -1,0 +1,70 @@
+## .NET build artifacts
+bin/
+obj/
+out/
+artifacts/
+
+## Visual Studio / VS Code
+.vscode/
+.vs/
+*.user
+*.suo
+
+## Logs
+*.log
+logs/
+*.trace
+*.ds_store
+
+## OS-specific
+.DS_Store
+Thumbs.db
+
+## NuGet
+*.nupkg
+.nuget/
+packages/
+
+## Test results
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+## Docker
+docker-compose.override.yml
+*.pid
+*.seed
+*.tar
+*.img
+
+## Build cache
+*.cache
+.cache/
+tmp/
+temp/
+
+## Rider / JetBrains
+.idea/
+*.iml
+
+## Environment files
+.env
+.env.*
+
+## Publish output
+publish/
+dist/
+
+## Generated files
+*.generated.cs
+*.g.cs
+
+## Backup files
+*.bak
+*.old
+*.orig
+
+## Local tooling
+tools/
+local/

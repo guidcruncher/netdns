@@ -1,0 +1,66 @@
+# Ignore .NET build output
+bin/
+obj/
+out/
+artifacts/
+
+# Ignore solution-level build output
+**/bin/
+**/obj/
+**/out/
+
+# Ignore test results
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# Ignore local environment files
+.env
+.env.*
+
+# Ignore logs
+*.log
+logs/
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE/editor files
+.vscode/
+.vs/
+.idea/
+*.user
+*.suo
+*.iml
+
+# Ignore NuGet packages
+*.nupkg
+packages/
+.nuget/
+
+# Ignore Docker cache and metadata
+*.pid
+*.seed
+*.tar
+*.img
+
+# Ignore temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.old
+*.orig
+
+# Ignore publish output
+publish/
+dist/
+
+# Ignore generated code
+*.generated.cs
+*.g.cs
+
+# Ignore test data artifacts
+tests/TestData/*.bin

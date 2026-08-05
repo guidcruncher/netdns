@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Architecture</title></head>
+<body>
+<h1>Architecture</h1>
+
+<h2>Components</h2>
+<ul>
+  <li>RuleEngine</li>
+  <li>HostMatcher</li>
+  <li>PrefixTrie</li>
+  <li>SuffixTrie</li>
+  <li>AhoCorasickMatcher</li>
+  <li>DnsCache</li>
+  <li>StaticDnsClient</li>
+  <li>UdpDnsClient</li>
+</ul>
+
+<h2>Flow</h2>
+<pre><code>
+DNS Query
+   ↓
+RuleEngine.Match()
+   ↓
+HostMatcher (override?)
+   ↓
+Rule evaluation
+   ↓
+Upstream selection
+   ↓
+Caching
+   ↓
+Response
+</code></pre>
+</body>
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DnsForwarder – High‑Performance DNS Forwarder</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+    h1, h2, h3 { color: #333; }
+    code { background: #f5f5f5; padding: 2px 4px; border-radius: 4px; }
+    pre { background: #f5f5f5; padding: 12px; border-radius: 6px; overflow-x: auto; }
+    .section { margin-bottom: 40px; }
+</style>
+</head>
+<body>
+
+<h1>DnsForwarder</h1>
+<p>
+DnsForwarder is a lightweight, high‑performance DNS forwarder written in .NET.  
+It supports rule‑based upstream selection, blocklists, allowlists, host overrides, caching, and wildcard matching.
+</p>
+
+<div class="section">
+<h2>Features</h2>
+<ul>
+    <li>Fast UDP DNS forwarding</li>
+    <li>Rule‑based upstream resolver selection</li>
+    <li>Blocklists and allowlists (regex, prefix, suffix, substring)</li>
+    <li>Host overrides with wildcard support</li>
+    <li>Longest‑core‑wins wildcard host specificity</li>
+    <li>DNS caching with TTL extraction</li>
+    <li>Static DNS responses for host overrides</li>
+    <li>Structured logging with request IDs</li>
+    <li>Modular rule engine and host matcher</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>Architecture Overview</h2>
+<p>
+DnsForwarder is built around two core components:
+</p>
+
+<h3>1. RuleEngine</h3>
+<p>
+The <code>RuleEngine</code> evaluates DNS queries and determines which upstream resolver to use.
+It supports:
+</p>
+<ul>
+    <li>Exact matches</li>
+    <li>Prefix matches (<code>example.*</code>)</li>
+    <li>Suffix matches (<code>*.example.com</code>)</li>
+    <li>Substring wildcard matches (<code>*ads*</code>)</li>
+    <li>Regex rules</li>
+    <li>Fallback resolvers</li>
+</ul>
+
+<p>
+Wildcard rule matching uses the project’s original non‑generic <code>AhoCorasickMatcher</code>.  
+Prefix and suffix rules use <code>PrefixTrie</code> and <code>SuffixTrie</code>.
+</p>
+
+<h3>2. HostMatcher</h3>
+<p>
+Host overrides are handled by a dedicated <code>HostMatcher</code> class.  
+It supports:
+</p>
+<ul>
+    <li>Exact host matches</li>
+    <li>Prefix wildcard (<code>example.*</code>)</li>
+    <li>Suffix wildcard (<code>*.example.com</code>)</li>
+    <li>Substring wildcard (<code>*ads*</code>)</li>
+</ul>
+
+<p>
+Wildcard host specificity follows a simple rule:
+</p>
+
+<blockquote>
+<b>Longest core wins.</b>  
+The “core” is the pattern with <code>*</code> removed.  
+The host override with the longest core is selected.
+</blockquote>
+
+<p>
+This behaviour mirrors dnsmasq and Unbound wildcard host resolution.
+</p>
+</div>
+
+<div class="section">
+<h2>Configuration</h2>
+
+<h3>Default Resolver</h3>
+<pre><code>{
+  "DefaultResolver": {
+    "Name": "default",
+    "Address": "1.1.1.1",
+    "Port": 53
+  }
+}
+</code></pre>
+
+<h3>Custom Resolvers</h3>
+<p>Resolvers may include rule patterns:</p>
+
+<pre><code>{
+  "Resolvers": [
+    {
+      "Name": "cloudflare",
+      "Address": "1.1.1.1",
+      "Port": 53,
+      "Rule": "*.example.com"
+    },
+    {
+      "Name": "blocker",
+      "Block": true,
+      "Rule": "*ads*"
+    }
+  ]
+}
+</code></pre>
+
+<h3>Hosts Files</h3>
+<p>
+Hosts files follow standard <code>/etc/hosts</code> formatting:
+</p>
+
+<pre><code>
+127.0.0.1 localhost
+10.0.0.5 *.example.com
+192.168.1.10 nas.local
+</code></pre>
+
+</div>
+
+<div class="section">
+<h2>Wildcard Host Matching</h2>
+
+<h3>Suffix Wildcard</h3>
+<pre><code>10.0.0.1 *.example.com</code></pre>
+
+<h3>Prefix Wildcard</h3>
+<pre><code>10.0.0.2 example.*</code></pre>
+
+<h3>Substring Wildcard</h3>
+<pre><code>10.0.0.3 *ads*</code></pre>
+
+<h3>Specificity Rule</h3>
+<p>
+Given:
+</p>
+
+<pre><code>
+10.0.0.10 *.example.com
+10.0.0.20 *ample.com
+10.0.0.30 *ple.com
+</code></pre>
+
+<p>
+Query: <code>foo.example.com</code>
+</p>
+
+<p>
+All three match, but the longest core is <code>example.com</code> (length 11),  
+so <code>10.0.0.10</code> wins.
+</p>
+</div>
+
+<div class="section">
+<h2>Caching</h2>
+<p>
+DnsForwarder extracts TTL from upstream responses and stores answers in <code>DnsCache</code>.
+TTL is capped by <code>CachingOptions.TtlSeconds</code>.
+</p>
+
+<pre><code>{
+  "Caching": {
+    "Enabled": true,
+    "TtlSeconds": 300,
+    "MaxEntries": 10000
+  }
+}
+</code></pre>
+</div>
+
+<div class="section">
+<h2>Unit Tests</h2>
+<p>
+The project includes tests for:
+</p>
+<ul>
+    <li>Hosts file parsing</li>
+    <li>Wildcard host matching</li>
+    <li>Longest‑core‑wins behaviour</li>
+    <li>Blocklist precedence over hosts</li>
+</ul>
+
+<p>Example wildcard test:</p>
+
+<pre><code>
+10.0.0.10 *.example.com
+10.0.0.20 *ample.com
+10.0.0.30 *ple.com
+</code></pre>
+
+<p>
+Querying <code>foo.example.com</code> selects <code>10.0.0.10</code>.
+</p>
+</div>
+
+<div class="section">
+<h2>Logging</h2>
+<p>
+DnsForwarder uses structured logging with request IDs:
+</p>
+
+<pre><code>
+Request 123: Hosts override matched for foo.example.com
+Request 456: Blocking domain adsdomain.com due to rule inline
+Request 789: TTL for example.net is 120s (via cloudflare)
+</code></pre>
+</div>
+
+</body>
+</html>

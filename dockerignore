@@ -1,0 +1,32 @@
+# Ignore git metadata
+.git/
+.gitignore
+
+# Ignore build outputs
+bin/
+obj/
+publish/
+
+# Ignore tests
+tests/
+
+# Ignore local configs not meant for container
+appsettings.Development.json
+appsettings.Local.json
+
+# Ignore OS junk
+.DS_Store
+Thumbs.db
+
+# Ignore IDE settings
+.vscode/
+.vs/
+
+# Ignore logs
+logs/
+*.log
+
+# Ignore temp files
+*.tmp
+*.temp
+.cache/

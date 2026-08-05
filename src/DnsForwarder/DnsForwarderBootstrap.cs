@@ -1,6 +1,8 @@
 using System.Net;
+
 using DnsForwarder.Filtering;
 using DnsForwarder.RuleEngine;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

@@ -1,9 +1,12 @@
-using DnsForwarder;
-using DnsForwarder.RuleEngine;
-using DnsForwarder.Filtering;
-using Xunit;
-using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.RegularExpressions;
+
+using DnsForwarder;
+using DnsForwarder.Filtering;
+using DnsForwarder.RuleEngine;
+
+using Microsoft.Extensions.Logging.Abstractions;
+
+using Xunit;
 
 namespace DnsForwarder.Tests;
 

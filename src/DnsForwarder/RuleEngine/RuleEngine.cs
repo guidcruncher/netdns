@@ -56,7 +56,7 @@ public sealed class RuleEngine
         {
             "NXDOMAIN" => BuildRcodeResponse(request, rcode: 3),
             "SERVFAIL" => BuildRcodeResponse(request, rcode: 2),
-            "REFUSED"  => BuildRcodeResponse(request, rcode: 5),
+            "REFUSED" => BuildRcodeResponse(request, rcode: 5),
             "STATIC_IP" => BuildStaticIpResponse(request, IPAddress.Parse(_options.BlockResponse.StaticIp)),
             _ => BuildRcodeResponse(request, rcode: 3)
         };

@@ -44,6 +44,93 @@ public sealed class RuleEngine
         _aho.Build();
     }
 
+private byte[] BuildBlockResponse(byte[] request)
+{
+    var mode = _options.BlockResponse.Mode.ToUpperInvariant();
+
+    return mode switch
+    {
+        "NXDOMAIN" => BuildRcodeResponse(request, rcode: 3),
+        "SERVFAIL" => BuildRcodeResponse(request, rcode: 2),
+        "REFUSED"  => BuildRcodeResponse(request, rcode: 5),
+        "STATIC_IP" => BuildStaticIpResponse(request, IPAddress.Parse(_options.BlockResponse.StaticIp)),
+        _ => BuildRcodeResponse(request, rcode: 3)
+    };
+}
+
+private static byte[] BuildRcodeResponse(byte[] req, int rcode)
+{
+    var resp = new List<byte>();
+
+    // Transaction ID
+    resp.Add(req[0]);
+    resp.Add(req[1]);
+
+    // Flags: QR=1, RD=1, RA=1, RCODE=rcode
+    resp.Add(0x81);
+    resp.Add((byte)(0x80 | (rcode & 0x0F)));
+
+    // QDCOUNT = 1
+    resp.Add(0x00);
+    resp.Add(0x01);
+
+    // ANCOUNT = 0
+    resp.Add(0x00);
+    resp.Add(0x00);
+
+    // NSCOUNT = 0, ARCOUNT = 0
+    resp.Add(0x00);
+    resp.Add(0x00);
+    resp.Add(0x00);
+    resp.Add(0x00);
+
+    // Copy question section
+    resp.AddRange(req.Skip(12));
+
+    return resp.ToArray();
+}
+
+private static byte[] BuildStaticIpResponse(byte[] req, IPAddress ip)
+{
+    ushort id = (ushort)((req[0] << 8) | req[1]);
+
+    var response = new List<byte>
+    {
+        (byte)(id >> 8), (byte)(id & 0xFF),
+        0x81, 0x80, // QR=1, RD=1, RA=1, RCODE=0
+        0x00, 0x01, // QDCOUNT
+        0x00, 0x01, // ANCOUNT
+        0x00, 0x00, // NSCOUNT
+        0x00, 0x00  // ARCOUNT
+    };
+
+    // Copy question
+    response.AddRange(req.Skip(12));
+
+    // Answer section
+    response.Add(0xC0);
+    response.Add(0x0C);
+
+    var addrBytes = ip.GetAddressBytes();
+
+    if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        response.AddRange(new byte[] { 0x00, 0x01 }); // A
+    else
+        response.AddRange(new byte[] { 0x00, 0x1C }); // AAAA
+
+    response.AddRange(new byte[] { 0x00, 0x01 }); // CLASS IN
+
+    // TTL
+    response.AddRange(BitConverter.GetBytes(IPAddress.HostToNetworkOrder(_options.BlockResponse.Ttl)));
+
+    // RDLENGTH + RDATA
+    response.Add(0x00);
+    response.Add((byte)addrBytes.Length);
+    response.AddRange(addrBytes);
+
+    return response.ToArray();
+}
+
     private void AddResolver(UpstreamResolverOptions r)
     {
         var pattern = r.Rule ?? string.Empty;

@@ -1,5 +1,8 @@
 using DnsForwarder;
+using DnsForwarder.RuleEngine;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
+using System.Text.RegularExpressions;
 
 namespace DnsForwarder.Tests;
 

@@ -59,7 +59,9 @@ public class Program
             })
             .ConfigureServices((ctx, services) =>
             {
-                var options = ctx.Configuration.Get<DnsForwarderOptions>() ?? new DnsForwarderOptions();
+                var server = ctx.Configuration.Get<ServerOptions>() ?? new ServerOptions;
+
+                var options = server.Dns
 
                 // Override listen address via --listen
                 if (ctx.Configuration["ListenOverride"] is string listen)

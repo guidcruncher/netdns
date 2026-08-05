@@ -1,5 +1,6 @@
 using DnsForwarder;
 using DnsForwarder.RuleEngine;
+using DnsForwarder.Filtering;
 using Xunit;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.RegularExpressions;

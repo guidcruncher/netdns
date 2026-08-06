@@ -39,9 +39,9 @@ public static class EventsServiceCollection
                 case "json":
                     services.AddHostedService<JsonEventExporter>();
                     break;
-		case "litedb":
-		    services.AddHostedService<LiteDbEventExporter>();
-		    break;
+                case "litedb":
+                    services.AddHostedService<LiteDbEventExporter>();
+                    break;
             }
         }
 

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using DnsForwarder.Events;
@@ -10,8 +9,7 @@ public sealed class LiteDbEventExporter : BackgroundService
 {
     private readonly ILogger<LiteDbEventExporter> _logger;
     private readonly EventBus _bus;
-    private readonly string _dbPath;
-    private LiteDatabase? _db;
+    private readonly LiteDatabase _db;
 
     public LiteDbEventExporter(
         ILogger<LiteDbEventExporter> logger,
@@ -20,49 +18,38 @@ public sealed class LiteDbEventExporter : BackgroundService
         _logger = logger;
         _bus = bus;
 
-        _dbPath = Path.Combine(AppContext.BaseDirectory, "events.db");
-        _db = new LiteDatabase(_dbPath);
+        var dbPath = Path.Combine(AppContext.BaseDirectory, "events.db");
+        _db = new LiteDatabase(dbPath);
 
         Initialize();
     }
 
     private void Initialize()
     {
-        // Ensure collections exist
-        _db.GetCollection("dns_events");
-        _db.GetCollection("dhcp_events");
-        _db.GetCollection("ntp_events");
-
-        _logger.LogInformation("LiteDB event exporter initialized at {Path}", _dbPath);
+        _db.GetCollection<DnsEventDoc>("dns_events");
+        _db.GetCollection<DhcpEventDoc>("dhcp_events");
+        _db.GetCollection<NtpEventDoc>("ntp_events");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("LiteDB event exporter started.");
 
-        while (!stoppingToken.IsCancellationRequested)
+        await foreach (var evt in _bus.ConsumeAsync(stoppingToken))
         {
-            while (_bus.TryDequeue(out var evt))
+            try
             {
-                try
-                {
-                    WriteEvent(evt);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to write event to LiteDB");
-                }
+                WriteEvent(evt);
             }
-
-            await Task.Delay(50, stoppingToken);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to write event to LiteDB");
+            }
         }
     }
 
     private void WriteEvent(EventRecord evt)
     {
-        if (_db == null)
-            return;
-
         switch (evt)
         {
             case DnsQueryEvent q:
@@ -89,80 +76,108 @@ public sealed class LiteDbEventExporter : BackgroundService
 
     private void WriteDnsQuery(DnsQueryEvent q)
     {
-        var col = _db!.GetCollection("dns_events");
-        col.Insert(new
+        var col = _db.GetCollection<DnsEventDoc>("dns_events");
+        col.Insert(new DnsEventDoc
         {
-            timestamp = q.Timestamp,
-            client_ip = q.ClientIp.ToString(),
-            client_name = q.ClientName,
-            query_name = q.QueryName,
-            query_type = q.QueryType,
-            status = "QUERY",
-            response_ip = ""
+            Timestamp = q.Timestamp,
+            ClientIp = q.ClientIp.ToString(),
+            ClientName = q.ClientName ?? "",
+            QueryName = q.QueryName,
+            QueryType = q.QueryType,
+            Status = "QUERY",
+            ResponseIp = ""
         });
     }
 
     private void WriteDnsResponse(DnsResponseEvent r)
     {
-        var col = _db!.GetCollection("dns_events");
-        col.Insert(new
+        var col = _db.GetCollection<DnsEventDoc>("dns_events");
+        col.Insert(new DnsEventDoc
         {
-            timestamp = r.Timestamp,
-            client_ip = r.ClientIp.ToString(),
-            client_name = r.ClientName,
-            query_name = r.QueryName,
-            query_type = r.QueryType,
-            status = r.Status,
-            response_ip = r.ResponseIp?.ToString() ?? ""
+            Timestamp = r.Timestamp,
+            ClientIp = r.ClientIp.ToString(),
+            ClientName = r.ClientName ?? "",
+            QueryName = r.QueryName,
+            QueryType = r.QueryType,
+            Status = r.Status,
+            ResponseIp = r.ResponseIp?.ToString() ?? ""
         });
     }
 
     private void WriteDhcpLease(DhcpLeaseAllocatedEvent d)
     {
-        var col = _db!.GetCollection("dhcp_events");
-        col.Insert(new
+        var col = _db.GetCollection<DhcpEventDoc>("dhcp_events");
+        col.Insert(new DhcpEventDoc
         {
-            timestamp = d.Timestamp,
-            client_ip = d.ClientIp.ToString(),
-            mac = d.Mac.ToString(),
-            client_name = d.ClientName,
-            lease_start = d.LeaseStart,
-            lease_expiry = d.LeaseExpiry,
-            server_id = d.ServerId.ToString()
+            Timestamp = d.Timestamp,
+            ClientIp = d.ClientIp.ToString(),
+            Mac = d.Mac.ToString(),
+            ClientName = d.ClientName ?? "",
+            LeaseStart = d.LeaseStart,
+            LeaseExpiry = d.LeaseExpiry,
+            ServerId = d.ServerId.ToString()
         });
     }
 
     private void WriteDhcpRelease(DhcpLeaseReleasedEvent rel)
     {
-        var col = _db!.GetCollection("dhcp_events");
-        col.Insert(new
+        var col = _db.GetCollection<DhcpEventDoc>("dhcp_events");
+        col.Insert(new DhcpEventDoc
         {
-            timestamp = rel.Timestamp,
-            client_ip = "",
-            mac = rel.Mac.ToString(),
-            client_name = "",
-            lease_start = "",
-            lease_expiry = "",
-            server_id = ""
+            Timestamp = rel.Timestamp,
+            ClientIp = "",
+            Mac = rel.Mac.ToString(),
+            ClientName = "",
+            LeaseStart = DateTime.MinValue,
+            LeaseExpiry = DateTime.MinValue,
+            ServerId = ""
         });
     }
 
     private void WriteNtpSync(NtpSyncEvent n)
     {
-        var col = _db!.GetCollection("ntp_events");
-        col.Insert(new
+        var col = _db.GetCollection<NtpEventDoc>("ntp_events");
+        col.Insert(new NtpEventDoc
         {
-            timestamp = n.Timestamp,
-            client_ip = n.ClientIp.ToString(),
-            client_name = n.ClientName,
-            offset_ms = n.Offset.TotalMilliseconds,
-            success = n.Success
+            Timestamp = n.Timestamp,
+            ClientIp = n.ClientIp.ToString(),
+            ClientName = n.ClientName ?? "",
+            OffsetMs = n.Offset.TotalMilliseconds,
+            Success = n.Success
         });
     }
+}
 
-    public override void Dispose()
-    {
-        _db?.Dispose();
-        base.Dispose();
-    }
+public class DnsEventDoc
+{
+    public int Id { get; set; }
+    public DateTime Timestamp { get; set; }
+    public string ClientIp { get; set; } = "";
+    public string ClientName { get; set; } = "";
+    public string QueryName { get; set; } = "";
+    public string QueryType { get; set; } = "";
+    public string Status { get; set; } = "";
+    public string ResponseIp { get; set; } = "";
+}
+
+public class DhcpEventDoc
+{
+    public int Id { get; set; }
+    public DateTime Timestamp { get; set; }
+    public string ClientIp { get; set; } = "";
+    public string Mac { get; set; } = "";
+    public string ClientName { get; set; } = "";
+    public DateTime LeaseStart { get; set; }
+    public DateTime LeaseExpiry { get; set; }
+    public string ServerId { get; set; } = "";
+}
+
+public class NtpEventDoc
+{
+    public int Id { get; set; }
+    public DateTime Timestamp { get; set; }
+    public string ClientIp { get; set; } = "";
+    public string ClientName { get; set; } = "";
+    public double OffsetMs { get; set; }
+    public bool Success { get; set; }
 }

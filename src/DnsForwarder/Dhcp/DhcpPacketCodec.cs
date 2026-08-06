@@ -6,11 +6,15 @@ public static class DhcpPacketCodec
 {
     private static readonly byte[] MagicCookie = { 99, 130, 83, 99 };
 
+    // ------------------------------------------------------------
+    // INFORM ACK (no lease, no yiaddr)
+    // ------------------------------------------------------------
     public static byte[] BuildInformAck(
         DhcpPacket inform,
         IPAddress serverId,
         IPAddress router,
-        IPAddress dns)
+        IPAddress dns,
+        IPAddress? ntp = null)
     {
         var buf = new List<byte>();
 
@@ -54,16 +58,26 @@ public static class DhcpPacketCodec
         buf.Add(4);
         buf.AddRange(dns.GetAddressBytes());
 
-        buf.Add(255);
+        // NTP (optional)
+        if (ntp is not null)
+        {
+            buf.Add(42);
+            buf.Add(4);
+            buf.AddRange(ntp.GetAddressBytes());
+        }
+
+        buf.Add(255); // END
 
         return buf.ToArray();
     }
 
+    // ------------------------------------------------------------
+    // NAK
+    // ------------------------------------------------------------
     public static byte[] BuildNak(DhcpPacket request, IPAddress serverId)
     {
         var buf = new List<byte>();
 
-        // BOOTREPLY
         buf.Add(2);
         buf.Add(request.Htype);
         buf.Add(request.Hlen);
@@ -74,28 +88,25 @@ public static class DhcpPacketCodec
         buf.AddRange(BitConverter.GetBytes(request.Flags));
 
         buf.AddRange(request.Ciaddr.GetAddressBytes());
-        buf.AddRange(IPAddress.Any.GetAddressBytes()); // yiaddr = 0
+        buf.AddRange(IPAddress.Any.GetAddressBytes());
         buf.AddRange(serverId.GetAddressBytes());
         buf.AddRange(request.Giaddr.GetAddressBytes());
 
         buf.AddRange(request.Chaddr);
-
-        buf.AddRange(new byte[64]);  // sname
-        buf.AddRange(new byte[128]); // file
+        buf.AddRange(new byte[64]);
+        buf.AddRange(new byte[128]);
 
         buf.AddRange(MagicCookie);
 
-        // DHCP Message Type = NAK
         buf.Add(53);
         buf.Add(1);
         buf.Add((byte)DhcpMessageType.Nak);
 
-        // Server Identifier
         buf.Add(54);
         buf.Add(4);
         buf.AddRange(serverId.GetAddressBytes());
 
-        buf.Add(255); // END
+        buf.Add(255);
 
         return buf.ToArray();
     }
@@ -123,21 +134,19 @@ public static class DhcpPacketCodec
 
         int offset = 236;
 
-        // Magic cookie
         if (!data.Skip(offset).Take(4).SequenceEqual(MagicCookie))
             throw new Exception("Invalid DHCP magic cookie");
 
         offset += 4;
 
-        // Options
         while (offset < data.Length)
         {
             byte code = data[offset++];
 
-            if (code == 255) // END
+            if (code == 255)
                 break;
 
-            if (code == 0) // PAD
+            if (code == 0)
                 continue;
 
             byte len = data[offset++];
@@ -151,9 +160,16 @@ public static class DhcpPacketCodec
     }
 
     // ------------------------------------------------------------
-    // BUILD OFFER
+    // OFFER
     // ------------------------------------------------------------
-    public static byte[] BuildOffer(DhcpPacket discover, IPAddress offeredIp, IPAddress serverId, IPAddress router, IPAddress dns, IPAddress ntp, TimeSpan lease)
+    public static byte[] BuildOffer(
+        DhcpPacket discover,
+        IPAddress offeredIp,
+        IPAddress serverId,
+        IPAddress router,
+        IPAddress dns,
+        IPAddress? ntp,
+        TimeSpan lease)
     {
         return BuildResponse(
             discover,
@@ -167,9 +183,16 @@ public static class DhcpPacketCodec
     }
 
     // ------------------------------------------------------------
-    // BUILD ACK
+    // ACK
     // ------------------------------------------------------------
-    public static byte[] BuildAck(DhcpPacket request, IPAddress assignedIp, IPAddress serverId, IPAddress router, IPAddress dns, IPAddress ntp, TimeSpan lease)
+    public static byte[] BuildAck(
+        DhcpPacket request,
+        IPAddress assignedIp,
+        IPAddress serverId,
+        IPAddress router,
+        IPAddress dns,
+        IPAddress? ntp,
+        TimeSpan lease)
     {
         return BuildResponse(
             request,
@@ -197,8 +220,7 @@ public static class DhcpPacketCodec
     {
         var buf = new List<byte>();
 
-        // BOOTP header
-        buf.Add(2); // Op = BOOTREPLY
+        buf.Add(2);
         buf.Add(req.Htype);
         buf.Add(req.Hlen);
         buf.Add(req.Hops);
@@ -213,53 +235,43 @@ public static class DhcpPacketCodec
         buf.AddRange(req.Giaddr.GetAddressBytes());
 
         buf.AddRange(req.Chaddr);
-
-        // SNAME + FILE (empty)
         buf.AddRange(new byte[64]);
         buf.AddRange(new byte[128]);
 
-        // Magic cookie
         buf.AddRange(MagicCookie);
 
-        // DHCP Message Type
         buf.Add(53);
         buf.Add(1);
         buf.Add((byte)type);
 
-        // Server Identifier
         buf.Add(54);
         buf.Add(4);
         buf.AddRange(serverId.GetAddressBytes());
 
-        // Lease time
         buf.Add(51);
         buf.Add(4);
         buf.AddRange(BitConverter.GetBytes((uint)lease.TotalSeconds).Reverse());
 
-        // Router (default gateway)
         buf.Add(3);
         buf.Add(4);
         buf.AddRange(router.GetAddressBytes());
 
-        // DNS
         buf.Add(6);
         buf.Add(4);
         buf.AddRange(dns.GetAddressBytes());
 
-        if (ntp != null)
+        // NTP (optional)
+        if (ntp is not null)
         {
-            // NTP
             buf.Add(42);
             buf.Add(4);
             buf.AddRange(ntp.GetAddressBytes());
         }
 
-        // Subnet mask (optional)
         buf.Add(1);
         buf.Add(4);
         buf.AddRange(new byte[] { 255, 255, 255, 0 });
 
-        // END
         buf.Add(255);
 
         return buf.ToArray();

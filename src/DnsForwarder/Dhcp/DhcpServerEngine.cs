@@ -20,11 +20,8 @@ public sealed class DhcpServerEngine
     private readonly IPAddress _serverId;
     private readonly IPAddress _router;
     private readonly IPAddress _dns;
-    private readonly IPAddress _ntp;
+    private readonly IPAddress? _ntp;   // <-- FIX: nullable
 
-    // -------------------------------
-    // Test-mode support
-    // -------------------------------
     private readonly bool _testMode;
     private IPEndPoint? _lastClient;
 
@@ -50,8 +47,11 @@ public sealed class DhcpServerEngine
         _router = IPAddress.Parse(config.Router);
         _dns = IPAddress.Parse(config.DnsServer);
 
-        if (!string.IsNullOrEmpty(config.NtpServer))
+        // Optional NTP
+        if (!string.IsNullOrWhiteSpace(config.NtpServer))
             _ntp = IPAddress.Parse(config.NtpServer);
+        else
+            _ntp = null;
     }
 
     public async Task RunAsync(CancellationToken ct)
@@ -72,11 +72,9 @@ public sealed class DhcpServerEngine
                 break;
             }
 
-            // Track client endpoint for unicast test mode
             _lastClient = result.RemoteEndPoint;
 
             var req = DhcpPacketCodec.Parse(result.Buffer);
-
             var type = req.GetMessageType();
             var mac = new PhysicalAddress(req.Chaddr.Take(req.Hlen).ToArray());
 
@@ -109,9 +107,6 @@ public sealed class DhcpServerEngine
         }
     }
 
-    // -------------------------------
-    // Helper: choose reply endpoint
-    // -------------------------------
     private IPEndPoint ReplyEndpoint()
     {
         if (_testMode && _lastClient != null)
@@ -135,7 +130,7 @@ public sealed class DhcpServerEngine
             _serverId,
             _router,
             _dns,
-            _ntp,
+            _ntp,                     // <-- FIX: optional NTP passed
             TimeSpan.FromHours(1));
 
         await _transport.SendAsync(offer, offer.Length, ReplyEndpoint());
@@ -153,7 +148,6 @@ public sealed class DhcpServerEngine
 
         _logger.LogInformation("DHCP REQUEST from {Mac} for {Ip}", mac, requestedIp);
 
-        // Wrong server → NAK
         if (serverIdOpt != null && !serverIdOpt.Equals(_serverId))
         {
             var nak = DhcpPacketCodec.BuildNak(req, _serverId);
@@ -179,7 +173,7 @@ public sealed class DhcpServerEngine
             _serverId,
             _router,
             _dns,
-        _ntp,
+            _ntp,                     // <-- FIX: optional NTP passed
             TimeSpan.FromHours(1));
 
         await _transport.SendAsync(ack, ack.Length, ReplyEndpoint());
@@ -187,18 +181,12 @@ public sealed class DhcpServerEngine
         _logger.LogInformation("Sent ACK {Ip} to {Mac}", lease.Ip, mac);
     }
 
-    // ------------------------------------------------------------
-    // RELEASE → remove lease
-    // ------------------------------------------------------------
     private void HandleRelease(PhysicalAddress mac)
     {
         _logger.LogInformation("DHCP RELEASE from {Mac}", mac);
         _leaseEngine.Release(mac);
     }
 
-    // ------------------------------------------------------------
-    // DECLINE → mark IP bad + remove lease
-    // ------------------------------------------------------------
     private void HandleDecline(DhcpPacket req, PhysicalAddress mac)
     {
         var requestedIp = req.GetRequestedIp();
@@ -211,7 +199,7 @@ public sealed class DhcpServerEngine
     }
 
     // ------------------------------------------------------------
-    // INFORM → ACK with config only
+    // INFORM → ACK (no lease)
     // ------------------------------------------------------------
     private async Task HandleInformAsync(DhcpPacket req)
     {
@@ -221,7 +209,8 @@ public sealed class DhcpServerEngine
             req,
             _serverId,
             _router,
-            _dns);
+            _dns,
+            _ntp);                    // <-- FIX: optional NTP passed
 
         await _transport.SendAsync(ack, ack.Length, ReplyEndpoint());
 

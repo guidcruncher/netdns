@@ -1,6 +1,7 @@
 using System.Net;
 
 using DnsForwarder;
+using DnsForwarder.Ntp.Bootstrap;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,8 +20,8 @@ public static class NtpServerServiceCollectionExtensions
 
         if (!ntp.Enabled)
             return services; // NTP disabled — do nothing
-        services.Configure(ntp);
 
+        services.AddSingleton<NtpServerOptions>(ntp);
         services.AddSingleton<ITimeSource, SystemTimeSource>();
         services.AddSingleton<INtpRequestHandler, NtpRequestHandler>();
 

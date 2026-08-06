@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace DnsForwarder;
+namespace DnsForwarder.Ntp;
 
 public sealed class NtpServerOptions
 {

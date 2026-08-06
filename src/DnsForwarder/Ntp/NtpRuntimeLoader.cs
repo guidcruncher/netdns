@@ -5,7 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace DnsForwarder.Ntp.BootStrap;
+namespace DnsForwarder.Ntp.Bootstrap;
 
 
 public sealed class NtpRuntimeLoader : IHostedService

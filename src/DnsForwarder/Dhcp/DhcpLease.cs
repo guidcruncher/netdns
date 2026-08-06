@@ -1,3 +1,4 @@
+using System.Net.NetworkInformation;
 using System.Net;
 
 namespace DnsForwarder.Dhcp;

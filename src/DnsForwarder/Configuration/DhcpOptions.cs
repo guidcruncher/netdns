@@ -38,6 +38,8 @@ public sealed class DhcpOptions
     //
     public string DnsServer { get; set; } = "1.1.1.1";
 
+    public string NtpServer { get; set; } = "";
+
     //
     // Default lease duration
     //

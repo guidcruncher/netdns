@@ -153,7 +153,7 @@ public static class DhcpPacketCodec
     // ------------------------------------------------------------
     // BUILD OFFER
     // ------------------------------------------------------------
-    public static byte[] BuildOffer(DhcpPacket discover, IPAddress offeredIp, IPAddress serverId, IPAddress router, IPAddress dns, TimeSpan lease)
+    public static byte[] BuildOffer(DhcpPacket discover, IPAddress offeredIp, IPAddress serverId, IPAddress router, IPAddress dns, IPAddress ntp, TimeSpan lease)
     {
         return BuildResponse(
             discover,
@@ -162,13 +162,14 @@ public static class DhcpPacketCodec
             serverId,
             router,
             dns,
+            ntp,
             lease);
     }
 
     // ------------------------------------------------------------
     // BUILD ACK
     // ------------------------------------------------------------
-    public static byte[] BuildAck(DhcpPacket request, IPAddress assignedIp, IPAddress serverId, IPAddress router, IPAddress dns, TimeSpan lease)
+    public static byte[] BuildAck(DhcpPacket request, IPAddress assignedIp, IPAddress serverId, IPAddress router, IPAddress dns, IPAddress ntp, TimeSpan lease)
     {
         return BuildResponse(
             request,
@@ -177,6 +178,7 @@ public static class DhcpPacketCodec
             serverId,
             router,
             dns,
+            ntp,
             lease);
     }
 
@@ -190,6 +192,7 @@ public static class DhcpPacketCodec
         IPAddress serverId,
         IPAddress router,
         IPAddress dns,
+        IPAddress? ntp,
         TimeSpan lease)
     {
         var buf = new List<byte>();
@@ -242,6 +245,14 @@ public static class DhcpPacketCodec
         buf.Add(6);
         buf.Add(4);
         buf.AddRange(dns.GetAddressBytes());
+
+        if (ntp != null)
+        {
+            // NTP
+            buf.Add(42);
+            buf.Add(4);
+            buf.AddRange(ntp.GetAddressBytes());
+        }
 
         // Subnet mask (optional)
         buf.Add(1);

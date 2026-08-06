@@ -20,6 +20,7 @@ public sealed class DhcpServerEngine
     private readonly IPAddress _serverId;
     private readonly IPAddress _router;
     private readonly IPAddress _dns;
+    private readonly IPAddress _ntp;
 
     // -------------------------------
     // Test-mode support
@@ -48,6 +49,9 @@ public sealed class DhcpServerEngine
         _serverId = IPAddress.Parse(config.ServerIdentifier);
         _router = IPAddress.Parse(config.Router);
         _dns = IPAddress.Parse(config.DnsServer);
+
+        if (!string.IsNullOrEmpty(config.NtpServer))
+            _ntp = IPAddress.Parse(config.NtpServer);
     }
 
     public async Task RunAsync(CancellationToken ct)
@@ -131,6 +135,7 @@ public sealed class DhcpServerEngine
             _serverId,
             _router,
             _dns,
+            _ntp,
             TimeSpan.FromHours(1));
 
         await _transport.SendAsync(offer, offer.Length, ReplyEndpoint());
@@ -174,6 +179,7 @@ public sealed class DhcpServerEngine
             _serverId,
             _router,
             _dns,
+        _ntp,
             TimeSpan.FromHours(1));
 
         await _transport.SendAsync(ack, ack.Length, ReplyEndpoint());

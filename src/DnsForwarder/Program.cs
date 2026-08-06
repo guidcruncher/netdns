@@ -1,9 +1,12 @@
 using DnsForwarder.Dhcp.Bootstrap;
 using DnsForwarder.Dns.Bootstrap;
 using DnsForwarder.Events.Bootstrap;
+using DnsForwarder.Metrics;
 using DnsForwarder.Metrics.Bootstrap;
 using DnsForwarder.Ntp.Bootstrap;
 
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -54,15 +57,13 @@ public class Program
             })
             .ConfigureServices((ctx, services) =>
             {
-                // EventBus + core services
                 services.AddEventBus(ctx.Configuration);
 
-                // DNS / DHCP / NTP servers
                 services.AddDnsForwarder(ctx.Configuration);
                 services.AddDhcpServer(ctx.Configuration);
                 services.AddNtpServer(ctx.Configuration);
 
-                // Metrics (conditionally registers Prometheus exporter)
+                // FIXED: Metrics DI registration
                 services.AddMetricServices(ctx.Configuration);
             })
             .Build();
@@ -81,6 +82,31 @@ public class Program
             var dhcpLoader = new DhcpRuntimeLoader(
                 scope.ServiceProvider.GetRequiredService<IConfiguration>());
             await dhcpLoader.LoadAsync(scope.ServiceProvider);
+        }
+
+        //
+        // FIXED: Start Prometheus sidecar HTTP server if enabled
+        //
+        var serverOptions = host.Services.GetRequiredService<IConfiguration>()
+            .GetSection("Server").Get<ServerOptions>() ?? new ServerOptions();
+
+        if (serverOptions.Metrics.StorageEngine == "prometheus")
+        {
+            var metricsAppBuilder = WebApplication.CreateBuilder(args);
+
+            // Share DI with main host
+            metricsAppBuilder.Services.AddSingleton(
+                host.Services.GetRequiredService<MetricsRegistry>());
+
+            var metricsApp = metricsAppBuilder.Build();
+
+            metricsApp.MapGet("/metrics", (MetricsRegistry metrics) =>
+            {
+                var text = metrics.RenderPrometheus();
+                return Results.Text(text, "text/plain; version=0.0.4");
+            });
+
+            _ = metricsApp.RunAsync(); // fire-and-forget sidecar
         }
 
         await host.RunAsync();

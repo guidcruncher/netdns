@@ -2,6 +2,7 @@ using System.Net;
 
 using DnsForwarder;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -11,13 +12,22 @@ public static class NtpServerServiceCollectionExtensions
 {
     public static IServiceCollection AddNtpServer(
         this IServiceCollection services,
-        Action<NtpServerOptions>? configure = null)
+        IConfiguration config)
     {
-        if (configure != null)
-            services.Configure(configure);
+        var server = config.Get<ServerOptions>() ?? new ServerOptions();
+        var ntp = server.Ntp;
+
+        if (!ntp.Enabled)
+            return services; // NTP disabled — do nothing
+        services.Configure(ntp);
 
         services.AddSingleton<ITimeSource, SystemTimeSource>();
         services.AddSingleton<INtpRequestHandler, NtpRequestHandler>();
+
+        // Runtime loader runs BEFORE the server starts
+        services.AddHostedService<NtpRuntimeLoader>();
+
+        // NTP server itself
         services.AddHostedService<NtpServerService>();
 
         return services;

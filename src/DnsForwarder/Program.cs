@@ -1,5 +1,6 @@
 using DnsForwarder.Dhcp.Bootstrap;
 using DnsForwarder.Dns.Bootstrap;
+using DnsForwarder.Ntp.Bootstrap;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -52,7 +53,8 @@ public class Program
             .ConfigureServices((ctx, services) =>
             {
                 services.AddDnsForwarder(ctx.Configuration);
-                services.AddDhcpServer(ctx.Configuration);   // <-- DHCP added here
+                services.AddDhcpServer(ctx.Configuration);
+                services.AddNtpServer(ctx.Configuration);
             })
             .Build();
 

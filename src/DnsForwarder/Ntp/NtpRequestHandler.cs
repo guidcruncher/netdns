@@ -1,10 +1,10 @@
 using System.Buffers.Binary;
 using System.Net.Sockets;
-using Microsoft.Extensions.Options;
 
 using DnsForwarder;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace DnsForwarder.Ntp;
 

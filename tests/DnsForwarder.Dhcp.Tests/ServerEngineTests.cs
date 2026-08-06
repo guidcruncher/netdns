@@ -4,6 +4,8 @@ using DnsForwarder.Dhcp;
 
 using FluentAssertions;
 
+using Microsoft.Extensions.Logging.Abstractions;
+
 using Xunit;
 
 public class ServerEngineTests
@@ -23,7 +25,7 @@ public class ServerEngineTests
             DnsServer = "1.1.1.1"
         };
 
-        var logger = TestLogger.Create<DhcpServerEngine>();
+        var logger = NullLogger<DnsForwarder.Dhcp.DhcpServerEngine>.Instance;
         var engine = new DhcpServerEngine(logger, opts, store);
 
         var fakeUdp = new FakeUdpClient();

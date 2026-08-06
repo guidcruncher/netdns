@@ -85,14 +85,14 @@ public class DnsBenchmarks
     [Benchmark]
     public void RuleEngine_Match_Default()
     {
-        var result = _engine.Match("example.com");
-        _ = result.UpstreamName;
+        var result = _engine.Match("example.com", "-");
+        _ = result.Upstreams;
     }
 
     [Benchmark]
     public void RuleEngine_Match_Block()
     {
-        var result = _engine.Match("ads.example.com");
+        var result = _engine.Match("ads.example.com", "--");
         _ = result.Block;
     }
 

@@ -1,24 +1,36 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace DnsForwarder.Dhcp.Tests.Integration;
+namespace DnsForwarder.Dhcp.Tests;
 
 public sealed class RealDhcpClient
 {
     private readonly UdpClient _udp;
 
-    public RealDhcpClient(int port)
+    /// <summary>
+    /// Bind the client to a specific local port.
+    /// Your tests call: new RealDhcpClient(6768)
+    /// </summary>
+    public RealDhcpClient(int localPort)
     {
-        _udp = new UdpClient(new IPEndPoint(IPAddress.Loopback, port));
+        _udp = new UdpClient(new IPEndPoint(IPAddress.Loopback, localPort));
     }
 
-    public async Task SendAsync(byte[] packet)
+    /// <summary>
+    /// Send a DHCP packet to the server (always port 6767 in tests).
+    /// </summary>
+    public Task SendAsync(byte[] packet)
     {
-        await _udp.SendAsync(packet, packet.Length, new IPEndPoint(IPAddress.Loopback, 6767));
+        return _udp.SendAsync(packet, packet.Length, new IPEndPoint(IPAddress.Loopback, 6767));
     }
 
-    public async Task<UdpReceiveResult> ReceiveAsync(CancellationToken ct)
+    /// <summary>
+    /// Receive a DHCP packet. UdpClient.ReceiveAsync returns ValueTask.
+    /// We convert it to Task to match your test signatures.
+    /// </summary>
+    public Task<UdpReceiveResult> ReceiveAsync(CancellationToken ct)
     {
-        return await _udp.ReceiveAsync(ct);
+        // Convert ValueTask<UdpReceiveResult> → Task<UdpReceiveResult>
+        return _udp.ReceiveAsync(ct).AsTask();
     }
 }

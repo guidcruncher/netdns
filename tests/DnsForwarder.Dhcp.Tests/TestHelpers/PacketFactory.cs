@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.NetworkInformation;
-
 using DnsForwarder.Dhcp;
 
 namespace DnsForwarder.Dhcp.Tests;
@@ -8,7 +7,6 @@ namespace DnsForwarder.Dhcp.Tests;
 public static class PacketFactory
 {
     private static readonly byte[] MagicCookie = { 99, 130, 83, 99 };
-
     private static readonly PhysicalAddress DefaultMac =
         new PhysicalAddress(new byte[] { 0, 1, 2, 3, 4, 5 });
 
@@ -17,8 +15,7 @@ public static class PacketFactory
     // ------------------------------------------------------------
     public static DhcpPacket Discover()
     {
-        var buf = BuildBasePacket(DefaultMac, DhcpMessageType.Discover);
-        return DhcpPacketCodec.Parse(buf);
+        return DhcpPacketCodec.Parse(DiscoverBytes());
     }
 
     // ------------------------------------------------------------
@@ -26,16 +23,16 @@ public static class PacketFactory
     // ------------------------------------------------------------
     public static byte[] DiscoverBytes()
     {
-        return BuildBasePacket(DefaultMac, DhcpMessageType.Discover);
+        var pkt = BuildBasePacket(DefaultMac, DhcpMessageType.Discover);
+        return AddEnd(pkt);
     }
 
     // ------------------------------------------------------------
-    // REQUEST (object) — REQUIRED BY PacketCodecTests
+    // REQUEST (object) — required by PacketCodecTests
     // ------------------------------------------------------------
     public static DhcpPacket Request()
     {
-        var buf = BuildBasePacket(DefaultMac, DhcpMessageType.Request);
-        return DhcpPacketCodec.Parse(buf);
+        return DhcpPacketCodec.Parse(BuildBasePacket(DefaultMac, DhcpMessageType.Request));
     }
 
     // ------------------------------------------------------------
@@ -47,17 +44,15 @@ public static class PacketFactory
         var requestedIp = offer.Yiaddr;
         var serverId = offer.GetServerIdentifier();
 
-        var buf = BuildBasePacket(mac, DhcpMessageType.Request);
+        var pkt = BuildBasePacket(mac, DhcpMessageType.Request);
 
-        // Option 50: Requested IP
         if (requestedIp != null)
-            buf = AddOption(buf, 50, requestedIp.GetAddressBytes());
+            pkt = AddOption(pkt, 50, requestedIp.GetAddressBytes());
 
-        // Option 54: Server Identifier
         if (serverId != null)
-            buf = AddOption(buf, 54, serverId.GetAddressBytes());
+            pkt = AddOption(pkt, 54, serverId.GetAddressBytes());
 
-        return AddEnd(buf);
+        return AddEnd(pkt);
     }
 
     // ------------------------------------------------------------
@@ -65,12 +60,12 @@ public static class PacketFactory
     // ------------------------------------------------------------
     public static byte[] InformBytes(IPAddress ciaddr)
     {
-        var buf = BuildBasePacket(DefaultMac, DhcpMessageType.Inform);
+        var pkt = BuildBasePacket(DefaultMac, DhcpMessageType.Inform);
 
         // Set CIADDR
-        Array.Copy(ciaddr.GetAddressBytes(), 0, buf, 12, 4);
+        Array.Copy(ciaddr.GetAddressBytes(), 0, pkt, 12, 4);
 
-        return AddEnd(buf);
+        return AddEnd(pkt);
     }
 
     // ------------------------------------------------------------
@@ -80,7 +75,6 @@ public static class PacketFactory
     {
         var buf = new List<byte>();
 
-        // BOOTREQUEST
         buf.Add(1); // op
         buf.Add(1); // htype
         buf.Add(6); // hlen
@@ -112,9 +106,6 @@ public static class PacketFactory
         return buf.ToArray();
     }
 
-    // ------------------------------------------------------------
-    // Add DHCP option
-    // ------------------------------------------------------------
     private static byte[] AddOption(byte[] packet, byte code, byte[] data)
     {
         var list = packet.ToList();
@@ -124,9 +115,6 @@ public static class PacketFactory
         return list.ToArray();
     }
 
-    // ------------------------------------------------------------
-    // Add END option (255)
-    // ------------------------------------------------------------
     private static byte[] AddEnd(byte[] packet)
     {
         var list = packet.ToList();

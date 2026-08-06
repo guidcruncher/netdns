@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using Xunit;
 
-namespace DnsForwarder.Dhcp.Tests.Integration;
+namespace DnsForwarder.Dhcp.Tests;
 
 public class DiscoverOfferTests
 {

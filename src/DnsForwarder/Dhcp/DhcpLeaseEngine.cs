@@ -8,8 +8,6 @@ public sealed class DhcpLeaseEngine
     private readonly IDhcpLeaseStore _store;
     private readonly CidrPoolAllocator _pool;
 
-    // Optional: track IPs that clients DECLINE
-    private readonly HashSet<IPAddress> _badIps = new();
 
     public DhcpLeaseEngine(IDhcpLeaseStore store, CidrPoolAllocator pool)
     {
@@ -109,7 +107,8 @@ public sealed class DhcpLeaseEngine
     // ------------------------------------------------------------
     public void Decline(IPAddress ip)
     {
-        _badIps.Add(ip);
+        _store.AddBadIp(ip);
     }
+
 }
 

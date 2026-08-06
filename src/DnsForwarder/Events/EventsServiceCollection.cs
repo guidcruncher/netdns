@@ -3,6 +3,8 @@ using DnsForwarder.Dhcp;
 using DnsForwarder.Dns;
 using DnsForwarder.Events;
 using DnsForwarder.Exporters;
+using DnsForwarder.Metrics;
+using DnsForwarder.Metrics.Bootstrap;
 using DnsForwarder.Ntp;
 
 using Microsoft.Extensions.Configuration;
@@ -41,6 +43,9 @@ public static class EventsServiceCollection
                     break;
                 case "litedb":
                     services.AddHostedService<LiteDbEventExporter>();
+                    break;
+                case "prometheus":
+                    services.AddMetricServices(config);
                     break;
             }
         }

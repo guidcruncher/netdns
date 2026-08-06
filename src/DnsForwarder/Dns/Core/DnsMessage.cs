@@ -10,18 +10,20 @@ public sealed class DnsMessage
     public List<DnsQuestion> Questions { get; } = new();
     public List<DnsResourceRecord> Answers { get; } = new();
 
-    // Added for metrics
+    // Metrics fields
     public string ResponseCode { get; set; } = "NOERROR";
     public IPAddress? AnswerAddress { get; set; }
 
-    public int GetMinTtl()
-    {
-        return Answers.Count == 0 ? 60 : Answers.Min(a => a.Ttl);
-    }
+    // Convenience properties for DNS server + metrics
+    public string QuestionName
+        => Questions.Count > 0 ? Questions[0].Name : string.Empty;
 
-    // ------------------------------------------------------------
-    // Minimal parser for metrics (non-blocking, safe)
-    // ------------------------------------------------------------
+    public string QuestionType
+        => Questions.Count > 0 ? Questions[0].Type.ToString() : string.Empty;
+
+    public int GetMinTtl()
+        => Answers.Count == 0 ? 60 : Answers.Min(a => a.Ttl);
+
     public static DnsMessage? TryParse(byte[] buffer)
     {
         try
@@ -51,4 +53,3 @@ public sealed class DnsResourceRecord
     public int Ttl { get; set; }
     public byte[] RData { get; set; } = Array.Empty<byte>();
 }
-

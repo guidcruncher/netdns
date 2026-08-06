@@ -72,7 +72,7 @@ public sealed class UpstreamNtpTimeSource : INtpTimeSource, IAsyncDisposable
         using var udp = new UdpClient();
         udp.Client.ReceiveTimeout = 3000;
 
-        var ip = await Dns.GetHostAddressesAsync(server, ct);
+        var ip = await System.Net.Dns.GetHostAddressesAsync(server, ct);
         var endpoint = new IPEndPoint(ip[0], 123);
 
         var request = BuildClientRequest();

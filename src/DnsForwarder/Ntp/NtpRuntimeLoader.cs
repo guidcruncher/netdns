@@ -12,12 +12,12 @@ public sealed class NtpRuntimeLoader : IHostedService
 {
     private readonly ILogger<NtpRuntimeLoader> _logger;
     private readonly NtpServerOptions _options;
-    private readonly ITimeSource _timeSource;
+    private readonly INtpTimeSource _timeSource;
 
     public NtpRuntimeLoader(
         ILogger<NtpRuntimeLoader> logger,
         NtpServerOptions options,
-        ITimeSource timeSource)
+        INtpTimeSource timeSource)
     {
         _logger = logger;
         _options = options;
@@ -35,7 +35,8 @@ public sealed class NtpRuntimeLoader : IHostedService
         _logger.LogInformation("NTP Runtime Loader starting…");
 
         // Example: warm-up reference timestamp
-        var refUtc = _timeSource.ReferenceUtc;
+        var result = await _timeSource.GetTimeAsync(cancellationToken);
+        var refUtc = result.ReferenceUtc;
         _logger.LogInformation("Reference time initialized: {RefUtc}", refUtc);
 
         // Example: load upstream sync or GPS discipline

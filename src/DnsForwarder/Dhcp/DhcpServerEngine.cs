@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-
 using Microsoft.Extensions.Logging;
 
 namespace DnsForwarder.Dhcp;
@@ -21,16 +20,25 @@ public sealed class DhcpServerEngine
     private readonly IPAddress _router;
     private readonly IPAddress _dns;
 
+    // -------------------------------
+    // Test-mode support
+    // -------------------------------
+    private readonly bool _testMode;
+    private IPEndPoint? _lastClient;
+
     public DhcpServerEngine(
         ILogger<DhcpServerEngine> logger,
         DhcpOptions config,
         IDhcpLeaseStore store,
-        IUdpTransport transport)
+        IUdpTransport transport,
+        bool testMode = false)
     {
         _logger = logger;
         _config = config;
         _store = store;
         _transport = transport;
+
+        _testMode = testMode;
 
         _pool = new CidrPoolAllocator(config.PoolCidr);
         _leaseEngine = new DhcpLeaseEngine(store, _pool);
@@ -56,9 +64,11 @@ public sealed class DhcpServerEngine
             }
             catch (OperationCanceledException)
             {
-                // Expected during shutdown or tests
                 break;
             }
+
+            // Track client endpoint for unicast test mode
+            _lastClient = result.RemoteEndPoint;
 
             var req = DhcpPacketCodec.Parse(result.Buffer);
 
@@ -94,6 +104,17 @@ public sealed class DhcpServerEngine
         }
     }
 
+    // -------------------------------
+    // Helper: choose reply endpoint
+    // -------------------------------
+    private IPEndPoint ReplyEndpoint()
+    {
+        if (_testMode && _lastClient != null)
+            return _lastClient;
+
+        return new IPEndPoint(IPAddress.Broadcast, 68);
+    }
+
     // ------------------------------------------------------------
     // DISCOVER → OFFER
     // ------------------------------------------------------------
@@ -111,7 +132,7 @@ public sealed class DhcpServerEngine
             _dns,
             TimeSpan.FromHours(1));
 
-        await _transport.SendAsync(offer, offer.Length, new IPEndPoint(IPAddress.Broadcast, 68));
+        await _transport.SendAsync(offer, offer.Length, ReplyEndpoint());
 
         _logger.LogInformation("Sent OFFER {Ip} to {Mac}", lease.Ip, mac);
     }
@@ -130,25 +151,22 @@ public sealed class DhcpServerEngine
         if (serverIdOpt != null && !serverIdOpt.Equals(_serverId))
         {
             var nak = DhcpPacketCodec.BuildNak(req, _serverId);
-            await _transport.SendAsync(nak, nak.Length, new IPEndPoint(IPAddress.Broadcast, 68));
+            await _transport.SendAsync(nak, nak.Length, ReplyEndpoint());
             _logger.LogWarning("Sent NAK to {Mac} (wrong server)", mac);
             return;
         }
 
-        // Allocate or renew lease
         var lease = await _leaseEngine.AllocateWithArpCheck(mac, TimeSpan.FromHours(1), _arp);
 
-        // If requested IP doesn't match allocated → NAK
         if (requestedIp != null && !requestedIp.Equals(lease.Ip))
         {
             var nak = DhcpPacketCodec.BuildNak(req, _serverId);
-            await _transport.SendAsync(nak, nak.Length, new IPEndPoint(IPAddress.Broadcast, 68));
+            await _transport.SendAsync(nak, nak.Length, ReplyEndpoint());
             _logger.LogWarning("Sent NAK to {Mac} (requested {ReqIp}, assigned {LeaseIp})",
                 mac, requestedIp, lease.Ip);
             return;
         }
 
-        // ACK
         var ack = DhcpPacketCodec.BuildAck(
             req,
             lease.Ip,
@@ -157,7 +175,7 @@ public sealed class DhcpServerEngine
             _dns,
             TimeSpan.FromHours(1));
 
-        await _transport.SendAsync(ack, ack.Length, new IPEndPoint(IPAddress.Broadcast, 68));
+        await _transport.SendAsync(ack, ack.Length, ReplyEndpoint());
 
         _logger.LogInformation("Sent ACK {Ip} to {Mac}", lease.Ip, mac);
     }
@@ -198,9 +216,8 @@ public sealed class DhcpServerEngine
             _router,
             _dns);
 
-        await _transport.SendAsync(ack, ack.Length, new IPEndPoint(IPAddress.Broadcast, 68));
+        await _transport.SendAsync(ack, ack.Length, ReplyEndpoint());
 
         _logger.LogInformation("Sent INFORM-ACK to client {Ip}", req.Ciaddr);
     }
 }
-

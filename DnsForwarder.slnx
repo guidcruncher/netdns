@@ -4,6 +4,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/DnsForwarder.Tests/DnsForwarder.Tests.csproj" />
+    <Project Path="tests/DnsForwarder.Dhcp.Tests/DnsForwarder.Dhcp.Tests.csproj" />
   </Folder>
   <Folder Name="/benchmarks/">
     <Project Path="tests/DnsForwarder.Benchmarks/DnsForwarder.Benchmarks.csproj" />

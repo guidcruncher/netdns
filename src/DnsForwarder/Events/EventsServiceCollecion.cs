@@ -3,6 +3,7 @@ using DnsForwarder.Dns;
 using DnsForwarder.Events;
 using DnsForwarder.Exporters;
 using DnsForwarder.Ntp;
+using DnsForrwarder;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,9 +38,6 @@ public static class EventsServiceCollection
             {
                 case "json":
                     services.AddHostedService<JsonEventExporter>();
-                    break;
-                case "sqlite":
-                    services.AddHostedService<SqliteEventExporter>();
                     break;
             }
         }

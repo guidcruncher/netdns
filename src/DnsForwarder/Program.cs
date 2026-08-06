@@ -1,4 +1,5 @@
-using DnsForwarder.Bootstrap;
+using DnsForwarder.Dhcp.Bootstrap;
+using DnsForwarder.Dns.Bootstrap;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

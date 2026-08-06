@@ -3,7 +3,7 @@
     <Project Path="src/DnsForwarder/DnsForwarder.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/DnsForwarder.Tests/DnsForwarder.Tests.csproj" />
+    <Project Path="tests/DnsForwarder.Dns.Tests/DnsForwarder.Dns.Tests.csproj" />
     <Project Path="tests/DnsForwarder.Dhcp.Tests/DnsForwarder.Dhcp.Tests.csproj" />
   </Folder>
   <Folder Name="/benchmarks/">

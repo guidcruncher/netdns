@@ -12,7 +12,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DnsForwarder", "src/DnsForwarder/DnsForwarder.csproj", "{A1B1C1D1-E1F1-41A1-B1C1-D1E1F1A1B1C1}"
 EndProject
 
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DnsForwarder.Tests", "tests/DnsForwarder.Tests/DnsForwarder.Tests.csproj", "{B2C2D2E2-F2A2-42B2-C2D2-E2F2A2B2C2D2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DnsForwarder.Dns.Tests", "tests/DnsForwarder.Dns.Tests/DnsForwarder.Dns.Tests.csproj", "{B2C2D2E2-F2A2-42B2-C2D2-E2F2A2B2C2D2}"
 EndProject
 
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DnsForwarder.Dhcp.Tests", "tests/DnsForwarder.Dhcp.Tests/DnsForwarder.Dhcp.Tests.csproj", "{B3C2D2E2-F2A2-42B2-C2D2-E2F2A2B2C2D2}"

@@ -16,6 +16,13 @@ public static class PacketFactory
         return DhcpPacketCodec.Parse(buf);
     }
 
+public static byte[] DiscoverBytes()
+{
+    var mac = new PhysicalAddress(new byte[] { 0, 1, 2, 3, 4, 5 });
+    return BuildBasePacket(mac, DhcpMessageType.Discover);
+}
+
+
     public static DhcpPacket Request()
     {
         var mac = new PhysicalAddress(new byte[] { 0, 1, 2, 3, 4, 5 });

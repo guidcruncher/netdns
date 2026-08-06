@@ -1,11 +1,7 @@
 using System.Net;
-
 using DnsForwarder.Dhcp;
-
 using FluentAssertions;
-
 using Microsoft.Extensions.Logging.Abstractions;
-
 using Xunit;
 
 namespace DnsForwarder.Dhcp.Tests;
@@ -32,9 +28,11 @@ public class ServerEngineTests
 
         var fakeUdp = new FakeUdpClient();
 
-        // IMPORTANT: Inject raw DHCP DISCOVER bytes, not DhcpPacket
         var discoverBytes = PacketFactory.DiscoverBytes();
         await fakeUdp.InjectReceive(discoverBytes);
+
+        // IMPORTANT: cancel the engine loop
+        fakeUdp.CancelAfter(50);
 
         await engine.RunAsync(fakeUdp.CancellationToken);
 

@@ -7,9 +7,15 @@ namespace DnsForwarder.Dhcp.Tests;
 public sealed class FakeUdpClient
 {
     private readonly Channel<byte[]> _incoming = Channel.CreateUnbounded<byte[]>();
-    public List<byte[]> SentPackets { get; } = new();
 
-    public CancellationToken CancellationToken => new CancellationTokenSource().Token;
+    private readonly CancellationTokenSource _cts = new();
+
+    public CancellationToken CancellationToken => _cts.Token;
+
+    public void CancelAfter(int ms)
+    {
+        _cts.CancelAfter(ms);
+    }
 
     public async Task InjectReceive(byte[] packet)
     {
@@ -24,8 +30,10 @@ public sealed class FakeUdpClient
 
     public Task SendAsync(byte[] buffer, int length, IPEndPoint endpoint)
     {
+        // Capture sent packets for assertions
         SentPackets.Add(buffer.Take(length).ToArray());
         return Task.CompletedTask;
     }
-}
 
+    public List<byte[]> SentPackets { get; } = new();
+}

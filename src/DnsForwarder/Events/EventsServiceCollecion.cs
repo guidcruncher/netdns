@@ -1,9 +1,9 @@
+using DnsForwarder;
 using DnsForwarder.Dhcp;
 using DnsForwarder.Dns;
 using DnsForwarder.Events;
 using DnsForwarder.Exporters;
 using DnsForwarder.Ntp;
-using DnsForrwarder;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +17,7 @@ public static class EventsServiceCollection
         var server = config.Get<ServerOptions>() ?? new ServerOptions();
         var metrics = server.Metrics;
 
-        servces.AddSingleton<MetricsOptions>(metrics);
+        services.AddSingleton<MetricOptions>(metrics);
 
         // Shared EventBus
         services.AddSingleton<EventBus>();

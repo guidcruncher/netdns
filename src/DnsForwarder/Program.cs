@@ -53,7 +53,7 @@ public class Program
             })
             .ConfigureServices((ctx, services) =>
             {
-                services.AddEventBus();
+                services.AddEventBus(ctx.Configuration);
 
                 services.AddDnsForwarder(ctx.Configuration);
                 services.AddDhcpServer(ctx.Configuration);

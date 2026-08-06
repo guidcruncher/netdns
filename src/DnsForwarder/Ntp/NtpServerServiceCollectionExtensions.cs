@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace DnsForwarder.Ntp;
+namespace DnsForwarder.Ntp.Bootstrap;
 
 public static class NtpServerServiceCollectionExtensions
 {

@@ -1,21 +1,20 @@
+using System.Threading.Channels;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading.Channels;
+
+using DnsForwarder.Dhcp;
+
 
 namespace DnsForwarder.Dhcp.Tests;
 
-public sealed class FakeUdpClient
+public sealed class FakeUdpClient : IUdpTransport
 {
     private readonly Channel<byte[]> _incoming = Channel.CreateUnbounded<byte[]>();
-
     private readonly CancellationTokenSource _cts = new();
 
     public CancellationToken CancellationToken => _cts.Token;
 
-    public void CancelAfter(int ms)
-    {
-        _cts.CancelAfter(ms);
-    }
+    public void CancelAfter(int ms) => _cts.CancelAfter(ms);
 
     public async Task InjectReceive(byte[] packet)
     {
@@ -30,7 +29,6 @@ public sealed class FakeUdpClient
 
     public Task SendAsync(byte[] buffer, int length, IPEndPoint endpoint)
     {
-        // Capture sent packets for assertions
         SentPackets.Add(buffer.Take(length).ToArray());
         return Task.CompletedTask;
     }

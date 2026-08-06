@@ -1,7 +1,6 @@
+using System.Net.Sockets;
 using System.Net;
 using System.Net.NetworkInformation;
-using System.Net.Sockets;
-
 using Microsoft.Extensions.Logging;
 
 namespace DnsForwarder.Dhcp;
@@ -11,6 +10,7 @@ public sealed class DhcpServerEngine
     private readonly ILogger<DhcpServerEngine> _logger;
     private readonly DhcpOptions _config;
     private readonly IDhcpLeaseStore _store;
+    private readonly IUdpTransport _transport;
 
     private readonly DhcpLeaseEngine _leaseEngine;
     private readonly CidrPoolAllocator _pool;
@@ -23,11 +23,13 @@ public sealed class DhcpServerEngine
     public DhcpServerEngine(
         ILogger<DhcpServerEngine> logger,
         DhcpOptions config,
-        IDhcpLeaseStore store)
+        IDhcpLeaseStore store,
+        IUdpTransport transport)
     {
         _logger = logger;
         _config = config;
         _store = store;
+        _transport = transport;
 
         _pool = new CidrPoolAllocator(config.PoolCidr);
         _leaseEngine = new DhcpLeaseEngine(store, _pool);
@@ -40,14 +42,23 @@ public sealed class DhcpServerEngine
 
     public async Task RunAsync(CancellationToken ct)
     {
-        using var udp = new UdpClient(new IPEndPoint(IPAddress.Parse(_config.ListenAddress), _config.ListenPort));
-
         _logger.LogInformation("DHCP server listening on {Address}:{Port}",
             _config.ListenAddress, _config.ListenPort);
 
         while (!ct.IsCancellationRequested)
         {
-            var result = await udp.ReceiveAsync(ct);
+            UdpReceiveResult result;
+
+            try
+            {
+                result = await _transport.ReceiveAsync(ct);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected during shutdown or tests
+                break;
+            }
+
             var req = DhcpPacketCodec.Parse(result.Buffer);
 
             var type = req.GetMessageType();
@@ -56,11 +67,11 @@ public sealed class DhcpServerEngine
             switch (type)
             {
                 case DhcpMessageType.Discover:
-                    await HandleDiscoverAsync(req, mac, udp);
+                    await HandleDiscoverAsync(req, mac);
                     break;
 
                 case DhcpMessageType.Request:
-                    await HandleRequestAsync(req, mac, udp);
+                    await HandleRequestAsync(req, mac);
                     break;
 
                 case DhcpMessageType.Release:
@@ -72,7 +83,7 @@ public sealed class DhcpServerEngine
                     break;
 
                 case DhcpMessageType.Inform:
-                    await HandleInformAsync(req, udp);
+                    await HandleInformAsync(req);
                     break;
 
                 default:
@@ -85,7 +96,7 @@ public sealed class DhcpServerEngine
     // ------------------------------------------------------------
     // DISCOVER → OFFER
     // ------------------------------------------------------------
-    private async Task HandleDiscoverAsync(DhcpPacket req, PhysicalAddress mac, UdpClient udp)
+    private async Task HandleDiscoverAsync(DhcpPacket req, PhysicalAddress mac)
     {
         _logger.LogInformation("DHCP DISCOVER from {Mac}", mac);
 
@@ -99,7 +110,7 @@ public sealed class DhcpServerEngine
             _dns,
             TimeSpan.FromHours(1));
 
-        await udp.SendAsync(offer, offer.Length, new IPEndPoint(IPAddress.Broadcast, 68));
+        await _transport.SendAsync(offer, offer.Length, new IPEndPoint(IPAddress.Broadcast, 68));
 
         _logger.LogInformation("Sent OFFER {Ip} to {Mac}", lease.Ip, mac);
     }
@@ -107,7 +118,7 @@ public sealed class DhcpServerEngine
     // ------------------------------------------------------------
     // REQUEST → ACK or NAK
     // ------------------------------------------------------------
-    private async Task HandleRequestAsync(DhcpPacket req, PhysicalAddress mac, UdpClient udp)
+    private async Task HandleRequestAsync(DhcpPacket req, PhysicalAddress mac)
     {
         var requestedIp = req.GetRequestedIp();
         var serverIdOpt = req.GetServerIdentifier();
@@ -118,7 +129,7 @@ public sealed class DhcpServerEngine
         if (serverIdOpt != null && !serverIdOpt.Equals(_serverId))
         {
             var nak = DhcpPacketCodec.BuildNak(req, _serverId);
-            await udp.SendAsync(nak, nak.Length, new IPEndPoint(IPAddress.Broadcast, 68));
+            await _transport.SendAsync(nak, nak.Length, new IPEndPoint(IPAddress.Broadcast, 68));
             _logger.LogWarning("Sent NAK to {Mac} (wrong server)", mac);
             return;
         }
@@ -130,7 +141,7 @@ public sealed class DhcpServerEngine
         if (requestedIp != null && !requestedIp.Equals(lease.Ip))
         {
             var nak = DhcpPacketCodec.BuildNak(req, _serverId);
-            await udp.SendAsync(nak, nak.Length, new IPEndPoint(IPAddress.Broadcast, 68));
+            await _transport.SendAsync(nak, nak.Length, new IPEndPoint(IPAddress.Broadcast, 68));
             _logger.LogWarning("Sent NAK to {Mac} (requested {ReqIp}, assigned {LeaseIp})",
                 mac, requestedIp, lease.Ip);
             return;
@@ -145,7 +156,7 @@ public sealed class DhcpServerEngine
             _dns,
             TimeSpan.FromHours(1));
 
-        await udp.SendAsync(ack, ack.Length, new IPEndPoint(IPAddress.Broadcast, 68));
+        await _transport.SendAsync(ack, ack.Length, new IPEndPoint(IPAddress.Broadcast, 68));
 
         _logger.LogInformation("Sent ACK {Ip} to {Mac}", lease.Ip, mac);
     }
@@ -168,13 +179,15 @@ public sealed class DhcpServerEngine
         _logger.LogWarning("DHCP DECLINE from {Mac} for {Ip}", mac, requestedIp);
 
         _leaseEngine.Release(mac);
-        // Optionally: add IP to a "bad IP" quarantine list.
+
+        if (requestedIp != null)
+            _leaseEngine.Decline(requestedIp);
     }
 
     // ------------------------------------------------------------
     // INFORM → ACK with config only
     // ------------------------------------------------------------
-    private async Task HandleInformAsync(DhcpPacket req, UdpClient udp)
+    private async Task HandleInformAsync(DhcpPacket req)
     {
         _logger.LogInformation("DHCP INFORM from client with IP {Ip}", req.Ciaddr);
 
@@ -184,8 +197,9 @@ public sealed class DhcpServerEngine
             _router,
             _dns);
 
-        await udp.SendAsync(ack, ack.Length, new IPEndPoint(IPAddress.Broadcast, 68));
+        await _transport.SendAsync(ack, ack.Length, new IPEndPoint(IPAddress.Broadcast, 68));
 
         _logger.LogInformation("Sent INFORM-ACK to client {Ip}", req.Ciaddr);
     }
 }
+

@@ -1,4 +1,4 @@
-SOLUTION = DnsForwarder.sln
+#SOLUTION = DnsForwarder.sln
 PROJECT = src/DnsForwarder/DnsForwarder.csproj
 TESTS = tests/DnsForwarder.Tests/DnsForwarder.Tests.csproj
 TESTSDHCP = tests/DnsForwarder.Dhcp.Tests/DnsForwarder.Dhcp.Tests.csproj
@@ -36,6 +36,13 @@ test:
 
 clean:
 	rm -rf $(BUILD_DIR)
+        rm -rf ./BenchmarkDotNet.Artifacts
+	rm -rf ./tests/DnsForwarder.Dhcp.Tests/bin
+	rm -rf ./tests/DnsForwarder.Dns.Tests/bin
+	rm -rf ./tests/DnsForwarder.Benchmarks/bin
+        rm -rf ./tests/DnsForwarder.Dhcp.Tests/obj
+        rm -rf ./tests/DnsForwarder.Dns.Tests/obj
+        rm -rf ./tests/DnsForwarder.Benchmarks/obj
 	dotnet clean $(SOLUTION)
 
 publish:

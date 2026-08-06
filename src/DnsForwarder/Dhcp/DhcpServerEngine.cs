@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 
 namespace DnsForwarder.Dhcp;
@@ -9,16 +11,38 @@ public sealed class DhcpServerEngine
     private readonly DhcpOptions _config;
     private readonly IDhcpLeaseStore _store;
 
-    public DhcpServerEngine(ILogger<DhcpServerEngine> logger, DhcpOptions config, IDhcpLeaseStore store)
+    private readonly DhcpLeaseEngine _leaseEngine;
+    private readonly CidrPoolAllocator _pool;
+    private readonly ArpConflictDetector _arp;
+
+    private readonly IPAddress _serverId;
+    private readonly IPAddress _router;
+    private readonly IPAddress _dns;
+
+    public DhcpServerEngine(
+        ILogger<DhcpServerEngine> logger,
+        DhcpOptions config,
+        IDhcpLeaseStore store)
     {
         _logger = logger;
         _config = config;
         _store = store;
+
+        _pool = new CidrPoolAllocator(config.PoolCidr);
+        _leaseEngine = new DhcpLeaseEngine(store, _pool);
+        _arp = new ArpConflictDetector(IPAddress.Parse(config.ListenAddress));
+
+        _serverId = IPAddress.Parse(config.ServerIdentifier);
+        _router = IPAddress.Parse(config.Router);
+        _dns = IPAddress.Parse(config.DnsServer);
     }
 
     public async Task RunAsync(CancellationToken ct)
     {
         using var udp = new UdpClient(new IPEndPoint(IPAddress.Parse(_config.ListenAddress), _config.ListenPort));
+
+        _logger.LogInformation("DHCP server listening on {Address}:{Port}",
+            _config.ListenAddress, _config.ListenPort);
 
         while (!ct.IsCancellationRequested)
         {
@@ -26,27 +50,141 @@ public sealed class DhcpServerEngine
             var req = DhcpPacketCodec.Parse(result.Buffer);
 
             var type = req.GetMessageType();
+            var mac = new PhysicalAddress(req.Chaddr.Take(req.Hlen).ToArray());
 
-            if (type == DhcpMessageType.Discover)
+            switch (type)
             {
-                var offeredIp = IPAddress.Parse("192.168.10.50");
-                var serverId = IPAddress.Parse("192.168.10.1");
-                var router = IPAddress.Parse("192.168.10.1");
-                var dns = IPAddress.Parse("1.1.1.1");
+                case DhcpMessageType.Discover:
+                    await HandleDiscoverAsync(req, mac, udp);
+                    break;
 
-                var offer = DhcpPacketCodec.BuildOffer(req, offeredIp, serverId, router, dns, TimeSpan.FromHours(1));
-                await udp.SendAsync(offer, offer.Length, new IPEndPoint(IPAddress.Broadcast, 68));
-            }
-            else if (type == DhcpMessageType.Request)
-            {
-                var assignedIp = req.GetRequestedIp() ?? IPAddress.Parse("192.168.10.50");
-                var serverId = IPAddress.Parse("192.168.10.1");
-                var router = IPAddress.Parse("192.168.10.1");
-                var dns = IPAddress.Parse("1.1.1.1");
+                case DhcpMessageType.Request:
+                    await HandleRequestAsync(req, mac, udp);
+                    break;
 
-                var ack = DhcpPacketCodec.BuildAck(req, assignedIp, serverId, router, dns, TimeSpan.FromHours(1));
-                await udp.SendAsync(ack, ack.Length, new IPEndPoint(IPAddress.Broadcast, 68));
+                case DhcpMessageType.Release:
+                    HandleRelease(mac);
+                    break;
+
+                case DhcpMessageType.Decline:
+                    HandleDecline(req, mac);
+                    break;
+
+                case DhcpMessageType.Inform:
+                    await HandleInformAsync(req, udp);
+                    break;
+
+                default:
+                    _logger.LogWarning("Unhandled DHCP message type: {Type}", type);
+                    break;
             }
         }
+    }
+
+    // ------------------------------------------------------------
+    // DISCOVER → OFFER
+    // ------------------------------------------------------------
+    private async Task HandleDiscoverAsync(DhcpPacket req, PhysicalAddress mac, UdpClient udp)
+    {
+        _logger.LogInformation("DHCP DISCOVER from {Mac}", mac);
+
+        var lease = await _leaseEngine.AllocateWithArpCheck(mac, TimeSpan.FromHours(1), _arp);
+
+        var offer = DhcpPacketCodec.BuildOffer(
+            req,
+            lease.Ip,
+            _serverId,
+            _router,
+            _dns,
+            TimeSpan.FromHours(1));
+
+        await udp.SendAsync(offer, offer.Length, new IPEndPoint(IPAddress.Broadcast, 68));
+
+        _logger.LogInformation("Sent OFFER {Ip} to {Mac}", lease.Ip, mac);
+    }
+
+    // ------------------------------------------------------------
+    // REQUEST → ACK or NAK
+    // ------------------------------------------------------------
+    private async Task HandleRequestAsync(DhcpPacket req, PhysicalAddress mac, UdpClient udp)
+    {
+        var requestedIp = req.GetRequestedIp();
+        var serverIdOpt = req.GetServerIdentifier();
+
+        _logger.LogInformation("DHCP REQUEST from {Mac} for {Ip}", mac, requestedIp);
+
+        // Wrong server → NAK
+        if (serverIdOpt != null && !serverIdOpt.Equals(_serverId))
+        {
+            var nak = DhcpPacketCodec.BuildNak(req, _serverId);
+            await udp.SendAsync(nak, nak.Length, new IPEndPoint(IPAddress.Broadcast, 68));
+            _logger.LogWarning("Sent NAK to {Mac} (wrong server)", mac);
+            return;
+        }
+
+        // Allocate or renew lease
+        var lease = await _leaseEngine.AllocateWithArpCheck(mac, TimeSpan.FromHours(1), _arp);
+
+        // If requested IP doesn't match allocated → NAK
+        if (requestedIp != null && !requestedIp.Equals(lease.Ip))
+        {
+            var nak = DhcpPacketCodec.BuildNak(req, _serverId);
+            await udp.SendAsync(nak, nak.Length, new IPEndPoint(IPAddress.Broadcast, 68));
+            _logger.LogWarning("Sent NAK to {Mac} (requested {ReqIp}, assigned {LeaseIp})",
+                mac, requestedIp, lease.Ip);
+            return;
+        }
+
+        // ACK
+        var ack = DhcpPacketCodec.BuildAck(
+            req,
+            lease.Ip,
+            _serverId,
+            _router,
+            _dns,
+            TimeSpan.FromHours(1));
+
+        await udp.SendAsync(ack, ack.Length, new IPEndPoint(IPAddress.Broadcast, 68));
+
+        _logger.LogInformation("Sent ACK {Ip} to {Mac}", lease.Ip, mac);
+    }
+
+    // ------------------------------------------------------------
+    // RELEASE → remove lease
+    // ------------------------------------------------------------
+    private void HandleRelease(PhysicalAddress mac)
+    {
+        _logger.LogInformation("DHCP RELEASE from {Mac}", mac);
+        _leaseEngine.Release(mac);
+    }
+
+    // ------------------------------------------------------------
+    // DECLINE → mark IP bad + remove lease
+    // ------------------------------------------------------------
+    private void HandleDecline(DhcpPacket req, PhysicalAddress mac)
+    {
+        var requestedIp = req.GetRequestedIp();
+        _logger.LogWarning("DHCP DECLINE from {Mac} for {Ip}", mac, requestedIp);
+
+        _leaseEngine.Release(mac);
+        // Optionally: add IP to a "bad IP" quarantine list.
+    }
+
+    // ------------------------------------------------------------
+    // INFORM → ACK with config only
+    // ------------------------------------------------------------
+    private async Task HandleInformAsync(DhcpPacket req, UdpClient udp)
+    {
+        _logger.LogInformation("DHCP INFORM from client with IP {Ip}", req.Ciaddr);
+
+        var ack = DhcpPacketCodec.BuildInformAck(
+            req,
+            _serverId,
+            _router,
+            _dns);
+
+        await udp.SendAsync(ack, ack.Length, new IPEndPoint(IPAddress.Broadcast, 68));
+
+        _logger.LogInformation("Sent INFORM-ACK to client {Ip}", req.Ciaddr);
     }
 }

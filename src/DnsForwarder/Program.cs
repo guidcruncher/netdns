@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -60,7 +61,9 @@ public class Program
         //
         // Runtime loading (hosts, blocklists, allowlists)
         //
-        using (var scope = host.Services.CreateScope())
+        var scopeFactory = host.Services.GetRequiredService<IServiceScopeFactory>();
+
+        using (var scope = scopeFactory.CreateScope())
         {
             var loader = new DnsForwarderRuntimeLoader(
                 scope.ServiceProvider.GetRequiredService<IConfiguration>());

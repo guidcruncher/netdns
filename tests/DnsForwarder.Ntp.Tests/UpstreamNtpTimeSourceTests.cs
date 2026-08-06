@@ -12,7 +12,7 @@ public class UpstreamNtpTimeSourceTests
 {
     private UpstreamNtpTimeSource CreateInstance()
     {
-        var options = Options.Create(new NtpServerOptions
+        var options = new NtpServerOptions
         {
             Enabled = true,
 
@@ -22,7 +22,7 @@ public class UpstreamNtpTimeSourceTests
                 Servers = new[] { "0.pool.ntp.org" },
                 PollIntervalSeconds = 16
             }
-        });
+        };
 
         return new UpstreamNtpTimeSource(
             NullLogger<UpstreamNtpTimeSource>.Instance,

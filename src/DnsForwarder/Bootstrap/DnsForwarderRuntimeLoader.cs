@@ -6,7 +6,9 @@ using DnsForwarder.RuleEngine;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DnsForwarder;
+using DnsForwarder;          
+
+namespace DnsForwarder.Bootstrap;
 
 public sealed class DnsForwarderRuntimeLoader
 {

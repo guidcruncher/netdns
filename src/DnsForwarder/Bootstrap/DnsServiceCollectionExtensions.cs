@@ -6,9 +6,11 @@ using DnsForwarder.RuleEngine;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DnsForwarder;
+using DnsForwarder;          
 
-public static class ServiceCollectionExtensions
+namespace DnsForwarder.Bootstrap;
+
+public static class DnsServiceCollectionExtensions
 {
     public static IServiceCollection AddDnsForwarder(this IServiceCollection services, IConfiguration config)
     {

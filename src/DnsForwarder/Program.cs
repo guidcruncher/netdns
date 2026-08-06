@@ -1,7 +1,8 @@
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using DnsForwarder.Bootstrap;
 
 namespace DnsForwarder;
 
@@ -9,9 +10,6 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        //
-        // Command-line flags
-        //
         var cmd = new ConfigurationBuilder()
             .AddCommandLine(args, new Dictionary<string, string>
             {
@@ -23,9 +21,6 @@ public class Program
             })
             .Build();
 
-        //
-        // Host builder
-        //
         var host = Host.CreateDefaultBuilder(args)
             .ConfigureAppConfiguration((ctx, config) =>
             {
@@ -55,20 +50,24 @@ public class Program
             .ConfigureServices((ctx, services) =>
             {
                 services.AddDnsForwarder(ctx.Configuration);
+                services.AddDhcpServer(ctx.Configuration);   // <-- DHCP added here
             })
             .Build();
 
         //
-        // Runtime loading (hosts, blocklists, allowlists)
+        // Runtime loading (DNS + DHCP)
         //
         var scopeFactory = host.Services.GetRequiredService<IServiceScopeFactory>();
 
         using (var scope = scopeFactory.CreateScope())
         {
-            var loader = new DnsForwarderRuntimeLoader(
+            var dnsLoader = new DnsForwarderRuntimeLoader(
                 scope.ServiceProvider.GetRequiredService<IConfiguration>());
+            await dnsLoader.LoadAsync(scope.ServiceProvider);
 
-            await loader.LoadAsync(scope.ServiceProvider);
+            var dhcpLoader = new DhcpRuntimeLoader(
+                scope.ServiceProvider.GetRequiredService<IConfiguration>());
+            await dhcpLoader.LoadAsync(scope.ServiceProvider);
         }
 
         await host.RunAsync();

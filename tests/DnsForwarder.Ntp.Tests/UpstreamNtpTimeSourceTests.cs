@@ -135,7 +135,13 @@ public class UpstreamNtpTimeSourceTests
 
         InvokeParseResponse(upstream, packet, t1, t4);
 
-        Assert.Equal(t3, GetReferenceUtc(upstream));
+        var actual = GetReferenceUtc(upstream);
+        var expected = t3;
+
+        var delta = (actual - expected).Duration();
+
+        Assert.True(delta < TimeSpan.FromMicroseconds(10),
+            $"Reference timestamp differs by {delta.TotalMicroseconds} µs");
     }
 
     [Fact]

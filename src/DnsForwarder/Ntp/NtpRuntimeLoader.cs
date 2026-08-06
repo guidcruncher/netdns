@@ -16,11 +16,11 @@ public sealed class NtpRuntimeLoader : IHostedService
 
     public NtpRuntimeLoader(
         ILogger<NtpRuntimeLoader> logger,
-        IOptions<NtpServerOptions> options,
+        NtpServerOptions options,
         ITimeSource timeSource)
     {
         _logger = logger;
-        _options = options.Value;
+        _options = options;
         _timeSource = timeSource;
     }
 

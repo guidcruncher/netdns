@@ -18,11 +18,11 @@ public sealed class NtpRequestHandler : INtpRequestHandler
     public NtpRequestHandler(
         ILogger<NtpRequestHandler> logger,
         ITimeSource timeSource,
-        IOptions<NtpServerOptions> options)
+        NtpServerOptions options)
     {
         _logger = logger;
         _timeSource = timeSource;
-        _options = options.Value;
+        _options = options;
     }
 
     public async Task HandleAsync(UdpReceiveResult result, UdpClient udp, CancellationToken ct)

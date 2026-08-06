@@ -19,11 +19,11 @@ public sealed class NtpServerService : BackgroundService
     public NtpServerService(
         ILogger<NtpServerService> logger,
         INtpRequestHandler handler,
-        IOptions<NtpServerOptions> options)
+        NtpServerOptions options)
     {
         _logger = logger;
         _handler = handler;
-        _options = options.Value;
+        _options = options;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

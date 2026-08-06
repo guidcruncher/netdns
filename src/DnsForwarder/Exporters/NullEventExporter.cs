@@ -12,7 +12,7 @@ public sealed class NullEventExporter : BackgroundService
     private readonly EventBus _bus;
     private readonly ILogger<NullEventExporter> _logger;
 
-    public JsonEventExporter(EventBus bus, ILogger<JsonEventExporter> logger)
+    public NullEventExporter(EventBus bus, ILogger<JsonEventExporter> logger)
     {
         _bus = bus;
         _logger = logger;

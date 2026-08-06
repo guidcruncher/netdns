@@ -42,8 +42,10 @@ clean:
 	rm -rf ./tests/DnsForwarder.Dhcp.Tests/bin
 	rm -rf ./tests/DnsForwarder.Dns.Tests/bin
 	rm -rf ./tests/DnsForwarder.Benchmarks/bin
+	rm -rf ./tests/DnsForwarder.Ntp.Tests/bin
 	rm -rf ./tests/DnsForwarder.Dhcp.Tests/obj
 	rm -rf ./tests/DnsForwarder.Dns.Tests/obj
+	rm -rf ./tests/DnsForwarder.Ntp.Tests/obj
 	rm -rf ./tests/DnsForwarder.Benchmarks/obj
 	dotnet clean $(SOLUTION)
 

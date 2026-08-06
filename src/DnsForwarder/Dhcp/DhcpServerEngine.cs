@@ -1,6 +1,7 @@
-using System.Net.Sockets;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
+
 using Microsoft.Extensions.Logging;
 
 namespace DnsForwarder.Dhcp;

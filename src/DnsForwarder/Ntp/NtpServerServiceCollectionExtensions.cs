@@ -26,11 +26,11 @@ public static class NtpServerServiceCollectionExtensions
 
         if (ntp.Upstream.Enabled)
         {
-            services.AddSingleton<ITimeSource, UpstreamNtpTimeSource>();
+            services.AddSingleton<INtpTimeSource, UpstreamNtpTimeSource>();
         }
         else
         {
-            services.AddSingleton<ITimeSource, SystemTimeSource>();
+            services.AddSingleton<INtpTimeSource, SystemTimeSource>();
         }
 
         services.AddSingleton<INtpRequestHandler, NtpRequestHandler>();

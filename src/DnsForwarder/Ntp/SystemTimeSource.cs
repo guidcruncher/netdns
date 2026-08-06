@@ -1,11 +1,21 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace DnsForwarder.Ntp;
 
-public sealed class SystemTimeSource : ITimeSource
+public sealed class SystemTimeSource : INtpTimeSource
 {
     private readonly DateTime _ref = DateTime.UtcNow;
 
-    public DateTime UtcNow => DateTime.UtcNow;
-    public DateTime ReferenceUtc => _ref;
+    public Task<NtpTimeResult> GetTimeAsync(CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+
+        return Task.FromResult(new NtpTimeResult(
+            UtcNow: now,
+            Offset: TimeSpan.Zero,
+            Stratum: 16,            // System clock = unsynchronized
+            ReferenceUtc: _ref));
+    }
 }
-
-

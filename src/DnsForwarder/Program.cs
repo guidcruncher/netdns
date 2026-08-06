@@ -54,11 +54,16 @@ public class Program
             })
             .ConfigureServices((ctx, services) =>
             {
+                // EventBus + core services
                 services.AddEventBus(ctx.Configuration);
 
+                // DNS / DHCP / NTP servers
                 services.AddDnsForwarder(ctx.Configuration);
                 services.AddDhcpServer(ctx.Configuration);
                 services.AddNtpServer(ctx.Configuration);
+
+                // Metrics (conditionally registers Prometheus exporter)
+                services.AddMetricServices(ctx.Configuration);
             })
             .Build();
 

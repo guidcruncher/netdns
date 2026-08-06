@@ -1,11 +1,7 @@
-using DnsForwarder;
 using DnsForwarder.Events;
 using DnsForwarder.Exporters;
-using DnsForwarder.Metrics;
-
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace DnsForwarder.Metrics.Bootstrap;
 
@@ -14,14 +10,19 @@ public static class MetricsServiceCollectionExtensions
     public static IServiceCollection AddMetricServices(
         this IServiceCollection services, IConfiguration config)
     {
-        var server = config.Get<ServerOptions>() ?? new ServerOptions();
+        // Bind ServerOptions from configuration
+        var server = config.GetSection("Server").Get<ServerOptions>() ?? new ServerOptions();
         var metrics = server.Metrics;
 
-        if (metrics.StorageEngine != "prometheus") { return services; }
-
+        // Always register the registry (safe, lightweight)
         services.AddSingleton<MetricsRegistry>();
 
-        services.AddHostedService<PrometheusMetricsExporter>();
+
+        // Conditionally enable Prometheus
+        if (string.Equals(metrics.StorageEngine, "prometheus", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddHostedService<PrometheusMetricsExporter>();
+        }
 
         return services;
     }

@@ -20,10 +20,8 @@ public sealed class DhcpServerEngine
     private readonly IPAddress _serverId;
     private readonly IPAddress _router;
     private readonly IPAddress _dns;
+    private readonly IPAddress? _ntp;
 
-    // -------------------------------
-    // Test-mode support
-    // -------------------------------
     private readonly bool _testMode;
     private IPEndPoint? _lastClient;
 
@@ -48,6 +46,41 @@ public sealed class DhcpServerEngine
         _serverId = IPAddress.Parse(config.ServerIdentifier);
         _router = IPAddress.Parse(config.Router);
         _dns = IPAddress.Parse(config.DnsServer);
+
+        if (!string.IsNullOrWhiteSpace(config.NtpServer))
+            _ntp = IPAddress.Parse(config.NtpServer);
+        else
+            _ntp = null;
+    }
+
+    // ------------------------------------------------------------
+    // Hostname Logging Helper
+    // ------------------------------------------------------------
+    private void LogClientName(DhcpPacket req, PhysicalAddress mac)
+    {
+        var hostOpt = req.Options.FirstOrDefault(o => o.Code == 12);
+        var fqdnOpt = req.Options.FirstOrDefault(o => o.Code == 81);
+
+        string? host = hostOpt != null
+            ? System.Text.Encoding.ASCII.GetString(hostOpt.Data)
+            : null;
+
+        string? fqdn = fqdnOpt != null
+            ? System.Text.Encoding.ASCII.GetString(fqdnOpt.Data)
+            : null;
+
+        if (!string.IsNullOrEmpty(fqdn))
+        {
+            _logger.LogInformation("Client {Mac} FQDN: {Fqdn}", mac, fqdn);
+        }
+        else if (!string.IsNullOrEmpty(host))
+        {
+            _logger.LogInformation("Client {Mac} hostname: {Host}", mac, host);
+        }
+        else
+        {
+            _logger.LogInformation("Client {Mac} did not send hostname", mac);
+        }
     }
 
     public async Task RunAsync(CancellationToken ct)
@@ -68,21 +101,21 @@ public sealed class DhcpServerEngine
                 break;
             }
 
-            // Track client endpoint for unicast test mode
             _lastClient = result.RemoteEndPoint;
 
             var req = DhcpPacketCodec.Parse(result.Buffer);
-
             var type = req.GetMessageType();
             var mac = new PhysicalAddress(req.Chaddr.Take(req.Hlen).ToArray());
 
             switch (type)
             {
                 case DhcpMessageType.Discover:
+                    LogClientName(req, mac);
                     await HandleDiscoverAsync(req, mac);
                     break;
 
                 case DhcpMessageType.Request:
+                    LogClientName(req, mac);
                     await HandleRequestAsync(req, mac);
                     break;
 
@@ -95,6 +128,7 @@ public sealed class DhcpServerEngine
                     break;
 
                 case DhcpMessageType.Inform:
+                    LogClientName(req, mac);
                     await HandleInformAsync(req);
                     break;
 
@@ -105,9 +139,6 @@ public sealed class DhcpServerEngine
         }
     }
 
-    // -------------------------------
-    // Helper: choose reply endpoint
-    // -------------------------------
     private IPEndPoint ReplyEndpoint()
     {
         if (_testMode && _lastClient != null)
@@ -131,6 +162,7 @@ public sealed class DhcpServerEngine
             _serverId,
             _router,
             _dns,
+            _ntp,
             TimeSpan.FromHours(1));
 
         await _transport.SendAsync(offer, offer.Length, ReplyEndpoint());
@@ -148,7 +180,6 @@ public sealed class DhcpServerEngine
 
         _logger.LogInformation("DHCP REQUEST from {Mac} for {Ip}", mac, requestedIp);
 
-        // Wrong server → NAK
         if (serverIdOpt != null && !serverIdOpt.Equals(_serverId))
         {
             var nak = DhcpPacketCodec.BuildNak(req, _serverId);
@@ -174,6 +205,7 @@ public sealed class DhcpServerEngine
             _serverId,
             _router,
             _dns,
+            _ntp,
             TimeSpan.FromHours(1));
 
         await _transport.SendAsync(ack, ack.Length, ReplyEndpoint());
@@ -181,18 +213,12 @@ public sealed class DhcpServerEngine
         _logger.LogInformation("Sent ACK {Ip} to {Mac}", lease.Ip, mac);
     }
 
-    // ------------------------------------------------------------
-    // RELEASE → remove lease
-    // ------------------------------------------------------------
     private void HandleRelease(PhysicalAddress mac)
     {
         _logger.LogInformation("DHCP RELEASE from {Mac}", mac);
         _leaseEngine.Release(mac);
     }
 
-    // ------------------------------------------------------------
-    // DECLINE → mark IP bad + remove lease
-    // ------------------------------------------------------------
     private void HandleDecline(DhcpPacket req, PhysicalAddress mac)
     {
         var requestedIp = req.GetRequestedIp();
@@ -205,7 +231,7 @@ public sealed class DhcpServerEngine
     }
 
     // ------------------------------------------------------------
-    // INFORM → ACK with config only
+    // INFORM → ACK
     // ------------------------------------------------------------
     private async Task HandleInformAsync(DhcpPacket req)
     {
@@ -215,7 +241,8 @@ public sealed class DhcpServerEngine
             req,
             _serverId,
             _router,
-            _dns);
+            _dns,
+            _ntp);
 
         await _transport.SendAsync(ack, ack.Length, ReplyEndpoint());
 

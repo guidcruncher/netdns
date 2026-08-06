@@ -20,6 +20,7 @@ public class PacketCodecTests
             IPAddress.Parse("192.168.10.1"),
             IPAddress.Parse("192.168.10.1"),
             IPAddress.Parse("1.1.1.1"),
+        null,
             TimeSpan.FromHours(1));
 
         var parsed = DhcpPacketCodec.Parse(offer);
@@ -36,6 +37,7 @@ public class PacketCodecTests
             IPAddress.Parse("192.168.10.1"),
             IPAddress.Parse("192.168.10.1"),
             IPAddress.Parse("1.1.1.1"),
+        null,
             TimeSpan.FromHours(1));
 
         var parsed = DhcpPacketCodec.Parse(ack);

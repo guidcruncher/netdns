@@ -1,4 +1,4 @@
-namespace DnsForwarder;
+namespace DnsForwarder.Dns;
 
 public sealed class DnsForwarderOptions
 {

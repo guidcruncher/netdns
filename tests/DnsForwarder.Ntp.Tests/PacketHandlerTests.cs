@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 using DnsForwarder.Ntp;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 using Xunit;
 
@@ -25,7 +25,7 @@ public class PacketHandlerTests
         var handler = new NtpRequestHandler(
             NullLogger<NtpRequestHandler>.Instance,
             new FakeTimeSource(),
-            Options.Create(new NtpServerOptions())
+            new NtpServerOptions()
         );
 
         var packet = new byte[48];
@@ -47,7 +47,7 @@ public class PacketHandlerTests
         var handler = new NtpRequestHandler(
             NullLogger<NtpRequestHandler>.Instance,
             new FakeTimeSource(),
-            Options.Create(new NtpServerOptions())
+            new NtpServerOptions()
         );
 
         var packet = new byte[48];

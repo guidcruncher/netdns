@@ -60,10 +60,10 @@ public sealed class NtpRequestHandler : INtpRequestHandler
         var refIdBytes = System.Text.Encoding.ASCII.GetBytes(_options.ReferenceId);
         Array.Copy(refIdBytes, 0, response, 12, Math.Min(4, refIdBytes.Length));
 
-        WriteTimestamp(response, 16, _timeSource.ReferenceUtc);
+        NtpTimestamp.WriteTimestamp(response, 16, _timeSource.ReferenceUtc);
         Buffer.BlockCopy(buffer, 40, response, 24, 8);
-        WriteTimestamp(response, 32, receiveUtc);
-        WriteTimestamp(response, 40, _timeSource.UtcNow);
+        NtpTimestamp.WriteTimestamp(response, 32, receiveUtc);
+        NtpTimestamp.WriteTimestamp(response, 40, _timeSource.UtcNow);
 
         await udp.SendAsync(response, response.Length, result.RemoteEndPoint);
 

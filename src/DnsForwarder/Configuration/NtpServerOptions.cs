@@ -12,4 +12,7 @@ public sealed class NtpServerOptions
     public int BufferSize { get; set; } = 65536;
     public int Stratum { get; set; } = 1;
     public string ReferenceId { get; set; } = "LOCL";
+
+    public UpstreamNtpOptions Upstream { get; set; } = new();
+
 }

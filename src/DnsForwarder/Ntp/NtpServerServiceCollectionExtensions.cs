@@ -21,8 +21,18 @@ public static class NtpServerServiceCollectionExtensions
         if (!ntp.Enabled)
             return services; // NTP disabled — do nothing
 
+
         services.AddSingleton<NtpServerOptions>(ntp);
-        services.AddSingleton<ITimeSource, SystemTimeSource>();
+
+        if (ntp.Upstream.Enabled)
+        {
+            services.AddSingleton<ITimeSource, UpstreamNtpTimeSource>();
+        }
+        else
+        {
+            services.AddSingleton<ITimeSource, SystemTimeSource>();
+        }
+
         services.AddSingleton<INtpRequestHandler, NtpRequestHandler>();
 
         // Runtime loader runs BEFORE the server starts

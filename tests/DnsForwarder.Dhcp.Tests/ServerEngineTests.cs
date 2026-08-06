@@ -1,7 +1,11 @@
 using System.Net;
+
 using DnsForwarder.Dhcp;
+
 using FluentAssertions;
+
 using Microsoft.Extensions.Logging.Abstractions;
+
 using Xunit;
 
 namespace DnsForwarder.Dhcp.Tests;

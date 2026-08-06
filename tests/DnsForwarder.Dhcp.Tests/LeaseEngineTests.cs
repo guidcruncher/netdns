@@ -69,8 +69,10 @@ public class LeaseEngineTests
         var engine = new DhcpLeaseEngine(store, pool);
 
         var ip = IPAddress.Parse("192.168.10.5");
+
         engine.Decline(ip);
 
         store.GetBadIps().Should().Contain(ip);
     }
+
 }

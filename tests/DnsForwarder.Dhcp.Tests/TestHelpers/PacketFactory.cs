@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.NetworkInformation;
+
 using DnsForwarder.Dhcp;
 
 namespace DnsForwarder.Dhcp.Tests;
@@ -16,11 +17,11 @@ public static class PacketFactory
         return DhcpPacketCodec.Parse(buf);
     }
 
-public static byte[] DiscoverBytes()
-{
-    var mac = new PhysicalAddress(new byte[] { 0, 1, 2, 3, 4, 5 });
-    return BuildBasePacket(mac, DhcpMessageType.Discover);
-}
+    public static byte[] DiscoverBytes()
+    {
+        var mac = new PhysicalAddress(new byte[] { 0, 1, 2, 3, 4, 5 });
+        return BuildBasePacket(mac, DhcpMessageType.Discover);
+    }
 
 
     public static DhcpPacket Request()

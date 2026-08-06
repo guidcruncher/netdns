@@ -1,6 +1,6 @@
 using DnsForwarder.Dhcp.Bootstrap;
 using DnsForwarder.Dns.Bootstrap;
-using DnsForwarder.Events;
+using DnsForwarder.Events.Bootstrap;
 using DnsForwarder.Ntp.Bootstrap;
 
 using Microsoft.Extensions.Configuration;

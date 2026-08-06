@@ -4,14 +4,20 @@ using DnsForwarder.Events;
 using DnsForwarder.Exporters;
 using DnsForwarder.Ntp;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DnsForwarder.Events;
+namespace DnsForwarder.Events.Bootstrap;
 
 public static class EventsServiceCollection
 {
-    public static IServiceCollection AddEventBus(this IServiceCollection services)
+    public static IServiceCollection AddEventBus(this IServiceCollection services, IConfiguration config)
     {
+        var server = config.Get<ServerOptions>() ?? new ServerOptions();
+        var metrics = server.Metrics;
+
+        servces.AddSingleton<MetricsOptions>(metrics);
+
         // Shared EventBus
         services.AddSingleton<EventBus>();
 
@@ -20,8 +26,23 @@ public static class EventsServiceCollection
         services.AddSingleton<IDnsMetrics, DnsMetrics>();
         services.AddSingleton<INtpMetrics, NtpMetrics>();
 
-        // Exporters (background services)
-        services.AddHostedService<JsonEventExporter>();
+        if (!metrics.Enabled)
+        {
+            services.AddHostedService<NullEventExporter>();
+        }
+        else
+        {
+            // Exporters (background services)
+            switch (metrics.StorageEngine)
+            {
+                case "json":
+                    services.AddHostedService<JsonEventExporter>();
+                    break;
+                case "sqlite":
+                    services.AddHostedService<SqliteEventExporter>();
+                    break;
+            }
+        }
 
         return services;
     }

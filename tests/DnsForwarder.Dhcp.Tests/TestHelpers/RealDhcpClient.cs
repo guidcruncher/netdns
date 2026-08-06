@@ -9,10 +9,11 @@ public sealed class RealDhcpClient
 
     /// <summary>
     /// Bind the client to a specific local port.
-    /// Your tests call: new RealDhcpClient(6768)
+    /// Your tests call: new RealDhcpClient(6868)
     /// </summary>
     public RealDhcpClient(int localPort)
     {
+        // Bind to the exact port the test expects to receive unicast replies on
         _udp = new UdpClient(new IPEndPoint(IPAddress.Loopback, localPort));
     }
 
@@ -21,16 +22,16 @@ public sealed class RealDhcpClient
     /// </summary>
     public Task SendAsync(byte[] packet)
     {
-        return _udp.SendAsync(packet, packet.Length, new IPEndPoint(IPAddress.Loopback, 6767));
+        return _udp.SendAsync(packet, packet.Length,
+            new IPEndPoint(IPAddress.Loopback, 6767));
     }
 
     /// <summary>
     /// Receive a DHCP packet. UdpClient.ReceiveAsync returns ValueTask.
-    /// We convert it to Task to match your test signatures.
+    /// Convert to Task to match test signatures.
     /// </summary>
     public Task<UdpReceiveResult> ReceiveAsync(CancellationToken ct)
     {
-        // Convert ValueTask<UdpReceiveResult> → Task<UdpReceiveResult>
         return _udp.ReceiveAsync(ct).AsTask();
     }
 }

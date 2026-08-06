@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.NetworkInformation;
+
 using DnsForwarder.Dhcp;
 
 namespace DnsForwarder.Dhcp.Tests;
@@ -11,44 +12,33 @@ public static class PacketFactory
         new PhysicalAddress(new byte[] { 0, 1, 2, 3, 4, 5 });
 
     // ------------------------------------------------------------
-    // DISCOVER (object)
+    // DISCOVER
     // ------------------------------------------------------------
     public static DhcpPacket Discover()
-    {
-        return DhcpPacketCodec.Parse(DiscoverBytes());
-    }
+        => DhcpPacketCodec.Parse(DiscoverBytes());
 
-    // ------------------------------------------------------------
-    // DISCOVER (bytes)
-    // ------------------------------------------------------------
     public static byte[] DiscoverBytes()
-    {
-        var pkt = BuildBasePacket(DefaultMac, DhcpMessageType.Discover);
-        return AddEnd(pkt);
-    }
+        => AddEnd(BuildBasePacket(DefaultMac, DhcpMessageType.Discover));
 
     // ------------------------------------------------------------
-    // REQUEST (object) — required by PacketCodecTests
+    // REQUEST (object)
     // ------------------------------------------------------------
     public static DhcpPacket Request()
-    {
-        return DhcpPacketCodec.Parse(BuildBasePacket(DefaultMac, DhcpMessageType.Request));
-    }
+        => DhcpPacketCodec.Parse(BuildBasePacket(DefaultMac, DhcpMessageType.Request));
 
     // ------------------------------------------------------------
-    // REQUEST (bytes) — used in integration tests
+    // REQUEST (bytes) for integration tests
     // ------------------------------------------------------------
     public static byte[] RequestBytes(DhcpPacket offer)
     {
         var mac = new PhysicalAddress(offer.Chaddr.Take(offer.Hlen).ToArray());
-        var requestedIp = offer.Yiaddr;
-        var serverId = offer.GetServerIdentifier();
-
         var pkt = BuildBasePacket(mac, DhcpMessageType.Request);
 
-        if (requestedIp != null)
-            pkt = AddOption(pkt, 50, requestedIp.GetAddressBytes());
+        // Option 50: Requested IP
+        pkt = AddOption(pkt, 50, offer.Yiaddr.GetAddressBytes());
 
+        // Option 54: Server Identifier
+        var serverId = offer.GetServerIdentifier();
         if (serverId != null)
             pkt = AddOption(pkt, 54, serverId.GetAddressBytes());
 
@@ -56,7 +46,7 @@ public static class PacketFactory
     }
 
     // ------------------------------------------------------------
-    // INFORM (bytes)
+    // INFORM
     // ------------------------------------------------------------
     public static byte[] InformBytes(IPAddress ciaddr)
     {
@@ -64,6 +54,34 @@ public static class PacketFactory
 
         // Set CIADDR
         Array.Copy(ciaddr.GetAddressBytes(), 0, pkt, 12, 4);
+
+        return AddEnd(pkt);
+    }
+
+    // ------------------------------------------------------------
+    // DECLINE
+    // ------------------------------------------------------------
+    public static byte[] DeclineBytes(DhcpPacket offer)
+    {
+        var mac = new PhysicalAddress(offer.Chaddr.Take(offer.Hlen).ToArray());
+        var pkt = BuildBasePacket(mac, DhcpMessageType.Decline);
+
+        // Option 50: Requested IP (the IP being declined)
+        pkt = AddOption(pkt, 50, offer.Yiaddr.GetAddressBytes());
+
+        return AddEnd(pkt);
+    }
+
+    // ------------------------------------------------------------
+    // RELEASE
+    // ------------------------------------------------------------
+    public static byte[] ReleaseBytes(DhcpPacket offer)
+    {
+        var mac = new PhysicalAddress(offer.Chaddr.Take(offer.Hlen).ToArray());
+        var pkt = BuildBasePacket(mac, DhcpMessageType.Release);
+
+        // RELEASE sets CIADDR to the client's leased IP
+        Array.Copy(offer.Yiaddr.GetAddressBytes(), 0, pkt, 12, 4);
 
         return AddEnd(pkt);
     }
@@ -106,6 +124,9 @@ public static class PacketFactory
         return buf.ToArray();
     }
 
+    // ------------------------------------------------------------
+    // Add DHCP option
+    // ------------------------------------------------------------
     private static byte[] AddOption(byte[] packet, byte code, byte[] data)
     {
         var list = packet.ToList();
@@ -115,6 +136,9 @@ public static class PacketFactory
         return list.ToArray();
     }
 
+    // ------------------------------------------------------------
+    // END option
+    // ------------------------------------------------------------
     private static byte[] AddEnd(byte[] packet)
     {
         var list = packet.ToList();
@@ -122,4 +146,3 @@ public static class PacketFactory
         return list.ToArray();
     }
 }
-

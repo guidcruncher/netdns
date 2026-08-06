@@ -6,6 +6,8 @@ using BenchmarkDotNet.Running;
 using DnsForwarder;
 using DnsForwarder.RuleEngine;
 
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace DnsForwarder.Benchmarks;
 
 public class DnsBenchmarks
@@ -63,7 +65,8 @@ public class DnsBenchmarks
             }
         };
 
-        _engine = new DnsForwarder.RuleEngine.RuleEngine(options);
+        var logger = NullLogger<DnsForwarder.RuleEngine.RuleEngine>.Instance;
+        _engine = new DnsForwarder.RuleEngine.RuleEngine(options, logger);
 
         _client = new UdpDnsClient(new IPEndPoint(IPAddress.Parse("1.1.1.1"), 53));
         _cache = new CachingDnsClientDecorator(_client, options.Caching.MaxEntries);

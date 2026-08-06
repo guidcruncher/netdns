@@ -1,6 +1,9 @@
 using System.Net;
+
 using DnsForwarder.Dhcp;
+
 using FluentAssertions;
+
 using Xunit;
 
 public class PoolAllocatorTests

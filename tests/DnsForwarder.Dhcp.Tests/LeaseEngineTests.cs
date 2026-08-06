@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.NetworkInformation;
+
 using DnsForwarder.Dhcp;
+
 using FluentAssertions;
+
 using Xunit;
 
 public class LeaseEngineTests

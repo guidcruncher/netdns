@@ -1,12 +1,11 @@
 using System.Net;
 
+using DnsForwarder;
 using DnsForwarder.Filtering;
 using DnsForwarder.RuleEngine;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
-using DnsForwarder;          
 
 namespace DnsForwarder.Bootstrap;
 

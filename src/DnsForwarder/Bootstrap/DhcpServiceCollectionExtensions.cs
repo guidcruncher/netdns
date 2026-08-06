@@ -1,7 +1,8 @@
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using DnsForwarder;
 using DnsForwarder.Dhcp;
+
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DnsForwarder.Bootstrap;
 

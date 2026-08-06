@@ -36,4 +36,17 @@ public sealed class DhcpPacket
         var opt = Options.FirstOrDefault(o => o.Code == 54);
         return opt == null ? null : new IPAddress(opt.Data);
     }
+
+    public string? GetHostName()
+    {
+        var opt = Options.FirstOrDefault(o => o.Code == 12);
+        return opt == null ? null : Encoding.ASCII.GetString(opt.Data);
+    }
+
+    public string? GetFqdn()
+    {
+        var opt = Options.FirstOrDefault(o => o.Code == 81);
+        return opt == null ? null : Encoding.ASCII.GetString(opt.Data);
+    }
+
 }

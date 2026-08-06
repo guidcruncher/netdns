@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-
 using Microsoft.Extensions.Logging;
 
 namespace DnsForwarder.Dhcp;
@@ -20,7 +19,7 @@ public sealed class DhcpServerEngine
     private readonly IPAddress _serverId;
     private readonly IPAddress _router;
     private readonly IPAddress _dns;
-    private readonly IPAddress? _ntp;   // <-- FIX: nullable
+    private readonly IPAddress? _ntp;
 
     private readonly bool _testMode;
     private IPEndPoint? _lastClient;
@@ -47,11 +46,40 @@ public sealed class DhcpServerEngine
         _router = IPAddress.Parse(config.Router);
         _dns = IPAddress.Parse(config.DnsServer);
 
-        // Optional NTP
         if (!string.IsNullOrWhiteSpace(config.NtpServer))
             _ntp = IPAddress.Parse(config.NtpServer);
         else
             _ntp = null;
+    }
+
+    // ------------------------------------------------------------
+    // Hostname Logging Helper
+    // ------------------------------------------------------------
+    private void LogClientName(DhcpPacket req, PhysicalAddress mac)
+    {
+        var hostOpt = req.Options.FirstOrDefault(o => o.Code == 12);
+        var fqdnOpt = req.Options.FirstOrDefault(o => o.Code == 81);
+
+        string? host = hostOpt != null
+            ? System.Text.Encoding.ASCII.GetString(hostOpt.Data)
+            : null;
+
+        string? fqdn = fqdnOpt != null
+            ? System.Text.Encoding.ASCII.GetString(fqdnOpt.Data)
+            : null;
+
+        if (!string.IsNullOrEmpty(fqdn))
+        {
+            _logger.LogInformation("Client {Mac} FQDN: {Fqdn}", mac, fqdn);
+        }
+        else if (!string.IsNullOrEmpty(host))
+        {
+            _logger.LogInformation("Client {Mac} hostname: {Host}", mac, host);
+        }
+        else
+        {
+            _logger.LogInformation("Client {Mac} did not send hostname", mac);
+        }
     }
 
     public async Task RunAsync(CancellationToken ct)
@@ -81,10 +109,12 @@ public sealed class DhcpServerEngine
             switch (type)
             {
                 case DhcpMessageType.Discover:
+                    LogClientName(req, mac);
                     await HandleDiscoverAsync(req, mac);
                     break;
 
                 case DhcpMessageType.Request:
+                    LogClientName(req, mac);
                     await HandleRequestAsync(req, mac);
                     break;
 
@@ -97,6 +127,7 @@ public sealed class DhcpServerEngine
                     break;
 
                 case DhcpMessageType.Inform:
+                    LogClientName(req, mac);
                     await HandleInformAsync(req);
                     break;
 
@@ -130,7 +161,7 @@ public sealed class DhcpServerEngine
             _serverId,
             _router,
             _dns,
-            _ntp,                     // <-- FIX: optional NTP passed
+            _ntp,
             TimeSpan.FromHours(1));
 
         await _transport.SendAsync(offer, offer.Length, ReplyEndpoint());
@@ -173,7 +204,7 @@ public sealed class DhcpServerEngine
             _serverId,
             _router,
             _dns,
-            _ntp,                     // <-- FIX: optional NTP passed
+            _ntp,
             TimeSpan.FromHours(1));
 
         await _transport.SendAsync(ack, ack.Length, ReplyEndpoint());
@@ -199,7 +230,7 @@ public sealed class DhcpServerEngine
     }
 
     // ------------------------------------------------------------
-    // INFORM → ACK (no lease)
+    // INFORM → ACK
     // ------------------------------------------------------------
     private async Task HandleInformAsync(DhcpPacket req)
     {
@@ -210,7 +241,7 @@ public sealed class DhcpServerEngine
             _serverId,
             _router,
             _dns,
-            _ntp);                    // <-- FIX: optional NTP passed
+            _ntp);
 
         await _transport.SendAsync(ack, ack.Length, ReplyEndpoint());
 

@@ -1,6 +1,8 @@
 using System;
-using Xunit;
+
 using DnsForwarder.Ntp;
+
+using Xunit;
 
 public class TimestampTests
 {

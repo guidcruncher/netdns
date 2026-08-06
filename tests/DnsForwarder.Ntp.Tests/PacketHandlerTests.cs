@@ -1,29 +1,42 @@
-using Xunit;
-using Moq;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
+
 using DnsForwarder.Ntp;
+
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+
+using Xunit;
 
 public class PacketHandlerTests
 {
+    private sealed class FakeTimeSource : ITimeSource
+    {
+        public DateTime UtcNow => new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        public DateTime ReferenceUtc => new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    }
+
     [Fact]
     public async Task Handler_IgnoresNonClientMode()
     {
-        var logger = Mock.Of<ILogger<NtpRequestHandler>>();
-        var timeSource = Mock.Of<ITimeSource>(t => t.UtcNow == DateTime.UtcNow && t.ReferenceUtc == DateTime.UtcNow);
-        var options = Options.Create(new NtpServerOptions());
-
-        var handler = new NtpRequestHandler(logger, timeSource, options);
+        var handler = new NtpRequestHandler(
+            NullLogger<NtpRequestHandler>.Instance,
+            new FakeTimeSource(),
+            Options.Create(new NtpServerOptions())
+        );
 
         var packet = new byte[48];
-        packet[0] = 0b_0010_0100; // mode = 4 (server), not client
+        packet[0] = 0b_0010_0100; // mode = 4 (server)
 
-        var udp = new UdpClient(AddressFamily.InterNetwork);
-        var result = new UdpReceiveResult(packet, new IPEndPoint(IPAddress.Loopback, 9999));
+        using var udp = new UdpClient(AddressFamily.InterNetwork);
+        udp.Client.Bind(new IPEndPoint(IPAddress.Loopback, 0));
 
-        await handler.HandleAsync(result, udp, default);
+        var result = new UdpReceiveResult(packet, new IPEndPoint(IPAddress.Loopback, udp.Client.LocalEndPoint is IPEndPoint ep ? ep.Port : 9999));
+
+        await handler.HandleAsync(result, udp, CancellationToken.None);
 
         // No exception = pass
     }
@@ -31,21 +44,22 @@ public class PacketHandlerTests
     [Fact]
     public async Task Handler_RespondsToClientMode()
     {
-        var logger = Mock.Of<ILogger<NtpRequestHandler>>();
-        var timeSource = Mock.Of<ITimeSource>(t => t.UtcNow == DateTime.UtcNow && t.ReferenceUtc == DateTime.UtcNow);
-        var options = Options.Create(new NtpServerOptions());
-
-        var handler = new NtpRequestHandler(logger, timeSource, options);
+        var handler = new NtpRequestHandler(
+            NullLogger<NtpRequestHandler>.Instance,
+            new FakeTimeSource(),
+            Options.Create(new NtpServerOptions())
+        );
 
         var packet = new byte[48];
         packet[0] = 0b_0010_0011; // mode = 3 (client)
 
-        var udp = new UdpClient(AddressFamily.InterNetwork);
+        using var udp = new UdpClient(AddressFamily.InterNetwork);
         udp.Client.Bind(new IPEndPoint(IPAddress.Loopback, 0));
 
-        var result = new UdpReceiveResult(packet, new IPEndPoint(IPAddress.Loopback, udp.Client.LocalEndPoint is IPEndPoint ep ? ep.Port : 9999));
+        var remote = new IPEndPoint(IPAddress.Loopback, udp.Client.LocalEndPoint is IPEndPoint ep ? ep.Port : 9999);
+        var result = new UdpReceiveResult(packet, remote);
 
-        await handler.HandleAsync(result, udp, default);
+        await handler.HandleAsync(result, udp, CancellationToken.None);
 
         // If no exception, response was sent
     }

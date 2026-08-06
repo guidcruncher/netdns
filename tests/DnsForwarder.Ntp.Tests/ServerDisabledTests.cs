@@ -1,7 +1,9 @@
-using Xunit;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Logging;
 using DnsForwarder.Ntp;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+using Xunit;
 
 public class ServerDisabledTests
 {

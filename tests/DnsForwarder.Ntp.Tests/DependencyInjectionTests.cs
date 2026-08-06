@@ -1,6 +1,8 @@
-using Xunit;
-using Microsoft.Extensions.DependencyInjection;
 using DnsForwarder.Ntp;
+
+using Microsoft.Extensions.DependencyInjection;
+
+using Xunit;
 
 public class DependencyInjectionTests
 {

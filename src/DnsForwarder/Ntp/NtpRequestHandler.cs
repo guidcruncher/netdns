@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Net.Sockets;
+using Microsoft.Extensions.Options;
 
 using DnsForwarder;
 

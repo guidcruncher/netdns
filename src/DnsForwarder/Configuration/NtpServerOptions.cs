@@ -1,7 +1,12 @@
+using System.Net;
+
 namespace DnsForwarder;
 
 public sealed class NtpServerOptions
 {
+
+    public bool Enabled { get; set; } = false;
+
     public IPAddress ListenAddress { get; set; } = IPAddress.Any;
     public int Port { get; set; } = 123;
     public int BufferSize { get; set; } = 65536;

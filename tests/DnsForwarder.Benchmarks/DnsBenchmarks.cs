@@ -3,15 +3,17 @@ using System.Net;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 
-using DnsForwarder;
-using DnsForwarder.RuleEngine;
+using DnsForwarder.Dns.Core;
+using DnsForwarder.Dns.RuleEngine;
 
-namespace DnsForwarder.Benchmarks;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace DnsForwarder.Dns.Benchmarks;
 
 public class DnsBenchmarks
 {
     private byte[] _query = Array.Empty<byte>();
-    private DnsForwarder.RuleEngine.RuleEngine _engine = default!;
+    private DnsForwarder.Dns.RuleEngine.RuleEngine _engine = default!;
     private IDnsClient _client = default!;
     private CachingDnsClientDecorator _cache = default!;
 
@@ -63,7 +65,8 @@ public class DnsBenchmarks
             }
         };
 
-        _engine = new DnsForwarder.RuleEngine.RuleEngine(options);
+        var logger = NullLogger<DnsForwarder.Dns.RuleEngine.RuleEngine>.Instance;
+        _engine = new DnsForwarder.Dns.RuleEngine.RuleEngine(options, logger);
 
         _client = new UdpDnsClient(new IPEndPoint(IPAddress.Parse("1.1.1.1"), 53));
         _cache = new CachingDnsClientDecorator(_client, options.Caching.MaxEntries);
@@ -82,14 +85,14 @@ public class DnsBenchmarks
     [Benchmark]
     public void RuleEngine_Match_Default()
     {
-        var result = _engine.Match("example.com");
-        _ = result.UpstreamName;
+        var result = _engine.Match("example.com", "-");
+        _ = result.Upstreams;
     }
 
     [Benchmark]
     public void RuleEngine_Match_Block()
     {
-        var result = _engine.Match("ads.example.com");
+        var result = _engine.Match("ads.example.com", "--");
         _ = result.Block;
     }
 

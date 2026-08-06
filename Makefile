@@ -1,6 +1,7 @@
 SOLUTION = DnsForwarder.sln
 PROJECT = src/DnsForwarder/DnsForwarder.csproj
 TESTS = tests/DnsForwarder.Tests/DnsForwarder.Tests.csproj
+TESTSDHCP = tests/DnsForwarder.Dhcp.Tests/DnsForwarder.Dhcp.Tests.csproj
 BUILD_DIR = bin/
 RUNTIME = linux-x64
 
@@ -31,6 +32,7 @@ benchmark:
 
 test:
 	dotnet test $(TESTS) -c Release --no-build
+	dotnet test $(TESTSDHCP) -c Release --no-build
 
 clean:
 	rm -rf $(BUILD_DIR)

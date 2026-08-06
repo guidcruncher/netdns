@@ -12,6 +12,8 @@ public sealed class DnsForwarderOptions
 
     public List<string> HostsFiles { get; set; } = new();
 
+    public BlockResponseOptions BlockResponse { get; set; } = new();
+
 }
 
 public sealed class ListenOptions

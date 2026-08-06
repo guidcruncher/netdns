@@ -1,11 +1,7 @@
 using System.Net;
-
 using DnsForwarder.Dhcp;
-
 using FluentAssertions;
-
 using Microsoft.Extensions.Logging.Abstractions;
-
 using Xunit;
 
 namespace DnsForwarder.Dhcp.Tests;
@@ -27,17 +23,19 @@ public class ServerEngineTests
             DnsServer = "1.1.1.1"
         };
 
-        var logger = NullLogger<DnsForwarder.Dhcp.DhcpServerEngine>.Instance;
+        var logger = NullLogger<DhcpServerEngine>.Instance;
         var engine = new DhcpServerEngine(logger, opts, store);
 
         var fakeUdp = new FakeUdpClient();
-        var discover = PacketFactory.Discover();
 
-        await fakeUdp.InjectReceive(discover);
+        // IMPORTANT: Inject raw DHCP DISCOVER bytes, not DhcpPacket
+        var discoverBytes = PacketFactory.DiscoverBytes();
+        await fakeUdp.InjectReceive(discoverBytes);
 
         await engine.RunAsync(fakeUdp.CancellationToken);
 
         fakeUdp.SentPackets.Should().NotBeEmpty();
+
         var parsed = DhcpPacketCodec.Parse(fakeUdp.SentPackets.First());
         parsed.GetMessageType().Should().Be(DhcpMessageType.Offer);
     }

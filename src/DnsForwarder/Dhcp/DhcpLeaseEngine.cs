@@ -8,7 +8,6 @@ public sealed class DhcpLeaseEngine
     private readonly IDhcpLeaseStore _store;
     private readonly CidrPoolAllocator _pool;
 
-
     public DhcpLeaseEngine(IDhcpLeaseStore store, CidrPoolAllocator pool)
     {
         _store = store;
@@ -24,7 +23,7 @@ public sealed class DhcpLeaseEngine
     }
 
     // ------------------------------------------------------------
-    // BASIC ALLOCATION (no ARP check)
+    // BASIC ALLOCATION
     // ------------------------------------------------------------
     public DhcpLease Allocate(PhysicalAddress mac, TimeSpan leaseTime)
     {
@@ -52,14 +51,13 @@ public sealed class DhcpLeaseEngine
     }
 
     // ------------------------------------------------------------
-    // ADVANCED ALLOCATION WITH ARP CONFLICT DETECTION
+    // ADVANCED ALLOCATION WITH ARP CHECK
     // ------------------------------------------------------------
     public async Task<DhcpLease> AllocateWithArpCheck(
         PhysicalAddress mac,
         TimeSpan leaseTime,
         ArpConflictDetector arp)
     {
-        // Renew existing lease
         var existing = GetLease(mac);
         if (existing != null)
         {
@@ -68,12 +66,11 @@ public sealed class DhcpLeaseEngine
             return existing;
         }
 
-        // Try each candidate IP in pool
         var used = _store.GetActiveLeases().Select(l => l.Ip);
 
         foreach (var candidate in _pool.AllocationSequence(used))
         {
-            if (_badIps.Contains(candidate))
+            if (_store.GetBadIps().Contains(candidate))
                 continue;
 
             bool conflict = await arp.HasConflictAsync(candidate, TimeSpan.FromMilliseconds(500));
@@ -103,12 +100,10 @@ public sealed class DhcpLeaseEngine
     }
 
     // ------------------------------------------------------------
-    // DECLINE HANDLER (mark IP as bad)
+    // DECLINE (QUARANTINE IP)
     // ------------------------------------------------------------
     public void Decline(IPAddress ip)
     {
         _store.AddBadIp(ip);
     }
-
 }
-

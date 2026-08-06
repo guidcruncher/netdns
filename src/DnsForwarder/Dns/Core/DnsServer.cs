@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Sockets;
 
+using DnsForwarder.Events;
+
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -11,16 +13,20 @@ public sealed class DnsServer : BackgroundService
     private readonly ILogger<DnsServer> _logger;
     private readonly DnsForwarderOptions _options;
     private readonly DnsForwarderService _forwarder;
+    private readonly IDnsMetrics _metrics;
+
     private UdpClient? _udp;
 
     public DnsServer(
         ILogger<DnsServer> logger,
         DnsForwarderOptions options,
-        DnsForwarderService forwarder)
+        DnsForwarderService forwarder,
+        IDnsMetrics metrics)
     {
         _logger = logger;
         _options = options;
         _forwarder = forwarder;
+        _metrics = metrics;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -59,7 +65,20 @@ public sealed class DnsServer : BackgroundService
     {
         try
         {
-            // Pass remote endpoint into forwarder for logging
+            // Parse DNS query for logging
+            var parsed = DnsMessage.TryParse(result.Buffer);
+
+            if (parsed is not null)
+            {
+                _metrics.Query(new DnsQueryEvent(
+                    Timestamp: DateTime.UtcNow,
+                    ClientIp: result.RemoteEndPoint.Address,
+                    ClientName: null, // DHCP hostname integration optional
+                    QueryName: parsed.QuestionName,
+                    QueryType: parsed.QuestionType));
+            }
+
+            // Forward to upstream resolver
             var responseBytes = await _forwarder.ProcessAsync(
                 result.Buffer,
                 result.RemoteEndPoint,
@@ -71,6 +90,21 @@ public sealed class DnsServer : BackgroundService
                     responseBytes,
                     responseBytes.Length,
                     result.RemoteEndPoint);
+
+                // Parse response for logging
+                var resp = DnsMessage.TryParse(responseBytes);
+
+                if (resp is not null)
+                {
+                    _metrics.Response(new DnsResponseEvent(
+                        Timestamp: DateTime.UtcNow,
+                        ClientIp: result.RemoteEndPoint.Address,
+                        ClientName: null,
+                        QueryName: resp.QuestionName,
+                        QueryType: resp.QuestionType,
+                        Status: resp.ResponseCode.ToString(),
+                        ResponseIp: resp.AnswerAddress));
+                }
             }
         }
         catch (Exception ex)

@@ -1,7 +1,9 @@
 using System.Text.Json;
+
+using DnsForwarder.Events;
+
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using DnsForwarder.Events;
 
 namespace DnsForwarder.Exporters;
 

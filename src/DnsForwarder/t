@@ -1,0 +1,34 @@
+using DnsForwarder.Events;
+using DnsForwarder.Exporters;
+using DnsForwarder.Dhcp;
+using DnsForwarder.Dns;
+using DnsForwarder.Ntp;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+var builder = Host.CreateDefaultBuilder(args);
+
+builder.ConfigureServices(services =>
+{
+    // EventBus singleton
+    services.AddSingleton<EventBus>();
+
+    // Metrics facades
+    services.AddSingleton<IDhcpMetrics, DhcpMetrics>();
+    services.AddSingleton<IDnsMetrics, DnsMetrics>();
+    services.AddSingleton<INtpMetrics, NtpMetrics>();
+
+    // Exporters
+    services.AddHostedService<JsonEventExporter>();
+
+    // Your existing servers
+    services.AddSingleton<DhcpServerEngine>();
+    services.AddSingleton<DnsServerEngine>();
+    services.AddSingleton<NtpServerEngine>();
+
+    // ... other services (options, stores, transports) ...
+});
+
+var app = builder.Build();
+
+await app.RunAsync();

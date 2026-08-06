@@ -1,5 +1,6 @@
 using DnsForwarder.Dhcp.Bootstrap;
 using DnsForwarder.Dns.Bootstrap;
+using DnsForwarder.Events;
 using DnsForwarder.Ntp.Bootstrap;
 
 using Microsoft.Extensions.Configuration;
@@ -52,6 +53,8 @@ public class Program
             })
             .ConfigureServices((ctx, services) =>
             {
+                services.AddEventBus();
+
                 services.AddDnsForwarder(ctx.Configuration);
                 services.AddDhcpServer(ctx.Configuration);
                 services.AddNtpServer(ctx.Configuration);

@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 
+using DnsForwarder.Events;
+
 using Microsoft.Extensions.Logging;
 
 namespace DnsForwarder.Dhcp;
@@ -12,6 +14,7 @@ public sealed class DhcpServerEngine
     private readonly DhcpOptions _config;
     private readonly IDhcpLeaseStore _store;
     private readonly IUdpTransport _transport;
+    private readonly IDhcpMetrics _metrics;
 
     private readonly DhcpLeaseEngine _leaseEngine;
     private readonly CidrPoolAllocator _pool;
@@ -30,12 +33,14 @@ public sealed class DhcpServerEngine
         DhcpOptions config,
         IDhcpLeaseStore store,
         IUdpTransport transport,
+        IDhcpMetrics metrics,
         bool testMode = false)
     {
         _logger = logger;
         _config = config;
         _store = store;
         _transport = transport;
+        _metrics = metrics;
 
         _testMode = testMode;
 
@@ -120,7 +125,7 @@ public sealed class DhcpServerEngine
                     break;
 
                 case DhcpMessageType.Release:
-                    HandleRelease(mac);
+                    HandleRelease(req, mac);
                     break;
 
                 case DhcpMessageType.Decline:
@@ -184,6 +189,13 @@ public sealed class DhcpServerEngine
         {
             var nak = DhcpPacketCodec.BuildNak(req, _serverId);
             await _transport.SendAsync(nak, nak.Length, ReplyEndpoint());
+
+            _metrics.NakSent(new DhcpNakEvent(
+                Timestamp: DateTime.UtcNow,
+                Mac: mac,
+                RequestedIp: requestedIp,
+                Reason: "Wrong server identifier"));
+
             _logger.LogWarning("Sent NAK to {Mac} (wrong server)", mac);
             return;
         }
@@ -194,6 +206,13 @@ public sealed class DhcpServerEngine
         {
             var nak = DhcpPacketCodec.BuildNak(req, _serverId);
             await _transport.SendAsync(nak, nak.Length, ReplyEndpoint());
+
+            _metrics.NakSent(new DhcpNakEvent(
+                Timestamp: DateTime.UtcNow,
+                Mac: mac,
+                RequestedIp: requestedIp,
+                Reason: "Requested IP mismatch"));
+
             _logger.LogWarning("Sent NAK to {Mac} (requested {ReqIp}, assigned {LeaseIp})",
                 mac, requestedIp, lease.Ip);
             return;
@@ -210,15 +229,36 @@ public sealed class DhcpServerEngine
 
         await _transport.SendAsync(ack, ack.Length, ReplyEndpoint());
 
+        _metrics.LeaseAllocated(new DhcpLeaseAllocatedEvent(
+            Timestamp: DateTime.UtcNow,
+            ClientIp: lease.Ip,
+            Mac: mac,
+            ClientName: req.GetHostName() ?? req.GetFqdn(),
+            ServerId: _serverId,
+            LeaseStart: DateTime.UtcNow,
+            LeaseExpiry: DateTime.UtcNow.AddHours(1)));
+
         _logger.LogInformation("Sent ACK {Ip} to {Mac}", lease.Ip, mac);
     }
 
-    private void HandleRelease(PhysicalAddress mac)
+    // ------------------------------------------------------------
+    // RELEASE → remove lease + event
+    // ------------------------------------------------------------
+    private void HandleRelease(DhcpPacket req, PhysicalAddress mac)
     {
         _logger.LogInformation("DHCP RELEASE from {Mac}", mac);
         _leaseEngine.Release(mac);
+
+        _metrics.LeaseReleased(new DhcpLeaseReleasedEvent(
+            Timestamp: DateTime.UtcNow,
+            Mac: mac,
+            ClientIp: req.Ciaddr,
+            ClientName: req.GetHostName() ?? req.GetFqdn()));
     }
 
+    // ------------------------------------------------------------
+    // DECLINE → mark IP bad + remove lease
+    // ------------------------------------------------------------
     private void HandleDecline(DhcpPacket req, PhysicalAddress mac)
     {
         var requestedIp = req.GetRequestedIp();
@@ -228,6 +268,12 @@ public sealed class DhcpServerEngine
 
         if (requestedIp != null)
             _leaseEngine.Decline(requestedIp);
+
+        _metrics.NakSent(new DhcpNakEvent(
+            Timestamp: DateTime.UtcNow,
+            Mac: mac,
+            RequestedIp: requestedIp,
+            Reason: "Client declined assigned IP"));
     }
 
     // ------------------------------------------------------------

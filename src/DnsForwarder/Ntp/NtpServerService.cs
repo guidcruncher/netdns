@@ -1,11 +1,10 @@
 using System.Net;
 using System.Net.Sockets;
 
-using DnsForwarder;
+using DnsForwarder.Events;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace DnsForwarder.Ntp;
 
@@ -14,16 +13,20 @@ public sealed class NtpServerService : BackgroundService
     private readonly ILogger<NtpServerService> _logger;
     private readonly INtpRequestHandler _handler;
     private readonly NtpServerOptions _options;
+    private readonly INtpMetrics _metrics;
+
     private UdpClient? _udp;
 
     public NtpServerService(
         ILogger<NtpServerService> logger,
         INtpRequestHandler handler,
-        NtpServerOptions options)
+        NtpServerOptions options,
+        INtpMetrics metrics)
     {
         _logger = logger;
         _handler = handler;
         _options = options;
+        _metrics = metrics;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -51,14 +54,62 @@ public sealed class NtpServerService : BackgroundService
                 break;
             }
 
-            _ = Task.Run(() => _handler.HandleAsync(result, _udp, stoppingToken), stoppingToken);
+            // Fire-and-forget request handler
+            _ = Task.Run(() => HandleRequestAsync(result, stoppingToken), stoppingToken);
+        }
+    }
+
+    private async Task HandleRequestAsync(UdpReceiveResult result, CancellationToken ct)
+    {
+        try
+        {
+            // Process NTP request
+            var response = await _handler.HandleAsync(result, _udp!, ct);
+
+            // Emit NTP sync event
+            _metrics.Sync(new NtpSyncEvent(
+                Timestamp: DateTime.UtcNow,
+                ClientIp: result.RemoteEndPoint.Address,
+                ClientName: null, // DHCP hostname integration optional
+                Offset: response.Offset,
+                Success: response.Success));
+
+            // Send response
+            if (response.Bytes is not null)
+            {
+                await _udp!.SendAsync(
+                    response.Bytes,
+                    response.Bytes.Length,
+                    result.RemoteEndPoint);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error processing NTP request from {Remote}",
+                result.RemoteEndPoint);
+
+            _metrics.Sync(new NtpSyncEvent(
+                Timestamp: DateTime.UtcNow,
+                ClientIp: result.RemoteEndPoint.Address,
+                ClientName: null,
+                Offset: TimeSpan.Zero,
+                Success: false));
         }
     }
 
     public override void Dispose()
     {
-        _udp?.Dispose();
+        try
+        {
+            _udp?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error disposing UDP listener");
+        }
+
         base.Dispose();
     }
 }
-

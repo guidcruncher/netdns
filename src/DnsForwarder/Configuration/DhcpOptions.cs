@@ -38,6 +38,9 @@ public sealed class DhcpOptions
     //
     public string DnsServer { get; set; } = "1.1.1.1";
 
+    //
+    // NTP server option (42)
+    //
     public string NtpServer { get; set; } = "";
 
     //

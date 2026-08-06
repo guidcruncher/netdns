@@ -7,6 +7,8 @@ using FluentAssertions;
 
 using Xunit;
 
+namespace DnsForwarder.Dhcp.Tests;
+
 public class LeaseEngineTests
 {
     private static PhysicalAddress Mac(int id) =>
@@ -47,7 +49,7 @@ public class LeaseEngineTests
         var pool = new CidrPoolAllocator("192.168.10.0/29");
         var engine = new DhcpLeaseEngine(store, pool);
 
-        engine.Save(new DhcpLease
+        store.Save(new DhcpLease
         {
             Mac = Mac(1),
             Ip = IPAddress.Parse("192.168.10.1"),

@@ -6,6 +6,8 @@ using FluentAssertions;
 
 using Xunit;
 
+namespace DnsForwarder.Dhcp.Tests;
+
 public class PacketCodecTests
 {
     [Fact]

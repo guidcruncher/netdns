@@ -6,6 +6,9 @@ using FluentAssertions;
 
 using Xunit;
 
+
+namespace DnsForwarder.Dhcp.Tests;
+
 public class PoolAllocatorTests
 {
     [Fact]
@@ -15,7 +18,8 @@ public class PoolAllocatorTests
 
         var ip = pool.Allocate(new IPAddress[0]);
 
-        ip.ToString().Should().Be("192.168.10.1");
+        ip.Should().NotBeNull();
+        ip!.ToString().Should().Be("192.168.10.1");
     }
 
     [Fact]

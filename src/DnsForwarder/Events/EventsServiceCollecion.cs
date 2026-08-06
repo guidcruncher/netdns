@@ -6,7 +6,7 @@ using DnsForwarder.Ntp;
 
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DnsForwarder.Ebents;
+namespace DnsForwarder.Events;
 
 public static class EventsServiceCollection
 {

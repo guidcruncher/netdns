@@ -1,3 +1,5 @@
+namespace DnsForwarder.Dhcp;
+
 public sealed class DhcpOptions
 {
     public bool Enabled { get; set; } = false;

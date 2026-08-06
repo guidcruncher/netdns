@@ -16,11 +16,7 @@ public static class DhcpServiceCollectionExtensions
             return services; // DHCP disabled — do nothing
 
         // DHCP engine + lease store
-        services.AddSingleton(new DhcpConfig
-        {
-            ListenAddress = dhcp.ListenAddress,
-            ListenPort = dhcp.ListenPort
-        });
+        services.AddSingleton<DhcpOptions>(dhcp);
 
         services.AddSingleton<IDhcpLeaseStore>(sp =>
             new JsonDhcpLeaseStore(dhcp.LeaseStorePath));

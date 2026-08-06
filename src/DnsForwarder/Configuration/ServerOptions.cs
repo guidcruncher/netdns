@@ -1,3 +1,5 @@
+using DnsForwarder.Dhcp;
+
 namespace DnsForwarder;
 
 public sealed class ServerOptions

@@ -1,3 +1,7 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using DnsForwarder.Dhcp;
+
 namespace DnsForwarder.Bootstrap;
 
 public sealed class DhcpRuntimeLoader

@@ -1,8 +1,8 @@
 using System.Buffers.Binary;
 using System.Net.Sockets;
 
-using DnsForwarder.Ntp;
 using DnsForwarder;
+using DnsForwarder.Ntp;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

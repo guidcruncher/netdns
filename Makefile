@@ -26,7 +26,7 @@ run:
 	dotnet run --project $(PROJECT)
 
 dev:
-	dotnet run --project ${PROJECT} -- --config appsettings.Development.json
+	dotnet run --project ${PROJECT} -c Debug -- --config appsettings.Development.json
 
 benchmark:
 	dotnet run -c Release --project tests/DnsForwarder.Benchmarks/DnsForwarder.Benchmarks.csproj

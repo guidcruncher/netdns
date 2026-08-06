@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -9,7 +8,9 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        // Parse command-line flags
+        //
+        // Command-line flags
+        //
         var cmd = new ConfigurationBuilder()
             .AddCommandLine(args, new Dictionary<string, string>
             {
@@ -21,6 +22,9 @@ public class Program
             })
             .Build();
 
+        //
+        // Host builder
+        //
         var host = Host.CreateDefaultBuilder(args)
             .ConfigureAppConfiguration((ctx, config) =>
             {
@@ -31,15 +35,10 @@ public class Program
                 config.AddJsonFile($"appsettings.{env}.json", optional: true, reloadOnChange: true);
 
                 if (env.Equals("Docker", StringComparison.OrdinalIgnoreCase))
-                {
                     config.AddJsonFile("appsettings.Docker.json", optional: true, reloadOnChange: true);
-                }
 
-                var customConfig = cmd["ConfigPath"];
-                if (!string.IsNullOrWhiteSpace(customConfig))
-                {
+                if (cmd["ConfigPath"] is string customConfig && !string.IsNullOrWhiteSpace(customConfig))
                     config.AddJsonFile(customConfig, optional: false, reloadOnChange: true);
-                }
 
                 config.AddEnvironmentVariables();
                 config.AddConfiguration(cmd);
@@ -54,22 +53,19 @@ public class Program
             })
             .ConfigureServices((ctx, services) =>
             {
-                var bootstrap = new DnsForwarderBootstrap(ctx.Configuration, services);
-                bootstrap.ConfigureServices();
+                services.AddDnsForwarder(ctx.Configuration);
             })
             .Build();
 
         //
-        // Load hosts + blocklists + allowlists AFTER building the host
+        // Runtime loading (hosts, blocklists, allowlists)
         //
         using (var scope = host.Services.CreateScope())
         {
-            var bootstrap = new DnsForwarderBootstrap(
-                scope.ServiceProvider.GetRequiredService<IConfiguration>(),
-                new ServiceCollection() // not used here
-            );
+            var loader = new DnsForwarderRuntimeLoader(
+                scope.ServiceProvider.GetRequiredService<IConfiguration>());
 
-            await bootstrap.LoadDataAsync(scope.ServiceProvider);
+            await loader.LoadAsync(scope.ServiceProvider);
         }
 
         await host.RunAsync();

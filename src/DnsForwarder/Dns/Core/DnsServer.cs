@@ -126,7 +126,7 @@ public sealed class DnsServer : BackgroundService
             }
 
             // Forward to upstream resolver
-            var responseBytes = await _forwarder.ProcessAsync(
+            var response = await _forwarder.ProcessAsync(
                 result.Buffer,
                 result.RemoteEndPoint,
                 ct);

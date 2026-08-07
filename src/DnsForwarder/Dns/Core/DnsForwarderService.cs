@@ -3,6 +3,7 @@ using System.Net;
 using DnsForwarder.Events;
 
 using Microsoft.Extensions.Logging;
+using System.Buffers;
 
 namespace DnsForwarder.Dns.Core;
 

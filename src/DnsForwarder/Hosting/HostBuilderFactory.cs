@@ -34,8 +34,20 @@ public static class HostBuilderFactory
                 var level = ctx.Configuration["Logging:Level"] ?? "Information";
                 logging.SetMinimumLevel(Enum.Parse<LogLevel>(level, ignoreCase: true));
             })
-            .ConfigureServices(ServiceRegistration.Register)
+            .ConfigureServices((ctx, services) =>
+            {
+                var logger = LoggerFactory.Create(builder =>
+                {
+                    builder.AddConsole();
+                }).CreateLogger("HostBuilderFactory");
+
+                logger.LogInformation("Registering services for environment: {Env}",
+                    ctx.HostingEnvironment.EnvironmentName);
+
+                ServiceRegistration.Register(ctx, services);
+
+                logger.LogInformation("Service registration completed.");
+            })
             .Build();
     }
 }
-

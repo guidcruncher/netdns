@@ -20,6 +20,8 @@ public static class DnsParser
         offset += 2;
 
         msg.IsResponse = (flags & 0x8000) != 0;
+        // Response code (last 4 bits of flags)
+        msg.ResponseCode = ((flags & 0x000F)).ToString();
 
         ushort qdCount = BinaryPrimitives.ReadUInt16BigEndian(buffer.AsSpan(offset));
         offset += 2;
@@ -77,6 +79,10 @@ public static class DnsParser
                 RData = rdata
             });
         }
+
+        // Ensure ResponseCode is set from header RCODE (last 4 bits)
+        ushort headerFlags = BinaryPrimitives.ReadUInt16BigEndian(buffer.AsSpan(2));
+        msg.ResponseCode = ((headerFlags & 0x000F)).ToString();
 
         return msg;
     }

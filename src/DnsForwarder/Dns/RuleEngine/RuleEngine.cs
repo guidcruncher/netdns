@@ -40,7 +40,7 @@ public sealed class RuleEngine
 
         if (options.DefaultResolvers != null && options.DefaultResolvers.Count > 0)
         {
-	    selected = options.DefaultResolvers[0];
+            selected = options.DefaultResolvers[0];
         }
         else
         {
@@ -362,6 +362,9 @@ public sealed class RuleEngine
 
     public async Task<byte[]> QueryAsync(string domain, byte[] request, string requestId, CancellationToken ct)
     {
+        // ------------------------------
+        // CACHE LOOKUP
+        // ------------------------------
         if (Cache.TryGet(domain, out var cached) && cached != null)
         {
             _logger.LogDebug("Request {RequestId}: Cache HIT for {Domain}", requestId, domain);
@@ -372,6 +375,9 @@ public sealed class RuleEngine
 
         _logger.LogDebug("Request {RequestId}: Cache MISS for {Domain}", requestId, domain);
 
+        // ------------------------------
+        // RULE MATCHING
+        // ------------------------------
         var match = Match(domain, requestId);
 
         if (match.Block)
@@ -382,7 +388,25 @@ public sealed class RuleEngine
             return BuildBlockResponse(request);
         }
 
-        foreach (var upstream in match.Upstreams)
+        // ------------------------------
+        // BUILD UPSTREAM CHAIN
+        // ------------------------------
+        var upstreams = new List<UpstreamEntry>(match.Upstreams);
+
+        // If no rule matched, append ALL default resolvers in order
+        if (upstreams.Count == 0)
+        {
+            foreach (var def in _options.DefaultResolvers)
+            {
+                var endpoint = new IPEndPoint(IPAddress.Parse(def.Address), def.Port);
+                upstreams.Add(new UpstreamEntry(def.Name, new UdpDnsClient(endpoint)));
+            }
+        }
+
+        // ------------------------------
+        // SEQUENTIAL FALLBACK EXECUTION
+        // ------------------------------
+        foreach (var upstream in upstreams)
         {
             try
             {
@@ -395,6 +419,8 @@ public sealed class RuleEngine
                     continue;
 
                 var rcode = resp[3] & 0x0F;
+
+                // SERVFAIL → try next resolver
                 if (rcode == 2)
                 {
                     _logger.LogWarning("Request {RequestId}: Upstream {Upstream} returned SERVFAIL for {Domain}",
@@ -403,7 +429,6 @@ public sealed class RuleEngine
                 }
 
                 var copy = resp.ToArray();
-
                 int ttl = ExtractTtl(copy);
 
                 if (ttl > 0)
@@ -424,12 +449,16 @@ public sealed class RuleEngine
             }
             catch (Exception ex)
             {
+                // Timeout, socket error, network failure → try next resolver
                 _logger.LogError(ex,
                     "Request {RequestId}: Error querying upstream {Upstream} for {Domain}",
                     requestId, upstream.Name, domain);
             }
         }
 
+        // ------------------------------
+        // ALL RESOLVERS FAILED
+        // ------------------------------
         _logger.LogError("Request {RequestId}: All upstreams failed for {Domain}, returning SERVFAIL",
             requestId, domain);
 

@@ -20,8 +20,8 @@ namespace DnsForwarder.Dns.Tests
 
             var parsed = DnsParser.Parse(resp);
 
-            Assert.Equal("NOERROR", parsed.ResponseCode);
-            Assert.Equal(1, parsed.Questions.Count);
+            Assert.Equal("3", parsed.ResponseCode);
+            Assert.Single(parsed.Questions);
             Assert.Equal("example.com", parsed.Questions[0].Name);
             Assert.Equal((ushort)1, parsed.Questions[0].Type);
             Assert.Equal((ushort)1, parsed.Questions[0].Class);

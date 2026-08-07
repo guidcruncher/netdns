@@ -59,6 +59,10 @@ public class Program
             })
             .ConfigureServices((ctx, services) =>
             {
+                var serverOptions = ctx.Configuration
+                            .GetSection("Server").Get<ServerOptions>() ?? new ServerOptions();
+
+                services.AddSingleton<ServerOptions>(serverOptions);
                 services.AddEventBus(ctx.Configuration);
 
                 services.AddDnsForwarder(ctx.Configuration);
@@ -109,7 +113,7 @@ public class Program
 
             var metricsApp = metricsAppBuilder.Build();
 
-            metricsApp.MapGet("/metrics", (MetricsRegistry metrics) =>
+            metricsApp.MapGet(serverOptions.Metrics.Location, (MetricsRegistry metrics) =>
             {
                 var text = metrics.RenderPrometheus();
                 return Results.Text(text, "text/plain; version=0.0.4");

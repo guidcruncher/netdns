@@ -1,3 +1,4 @@
+using DnsForwarder;
 using DnsForwarder.Events;
 
 using LiteDB;
@@ -15,12 +16,13 @@ public sealed class LiteDbEventExporter : BackgroundService
 
     public LiteDbEventExporter(
         ILogger<LiteDbEventExporter> logger,
-        EventBus bus)
+        EventBus bus,
+    ServerOptions config)
     {
         _logger = logger;
         _bus = bus;
 
-        var dbPath = Path.Combine(AppContext.BaseDirectory, "events.db");
+        var dbPath = Path.Combine(config.Metrics.Location, "events.db");
         _db = new LiteDatabase(dbPath);
 
         Initialize();

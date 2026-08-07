@@ -1,5 +1,6 @@
 using System.Text.Json;
 
+using DnsForwarder;
 using DnsForwarder.Events;
 
 using Microsoft.Extensions.Hosting;
@@ -13,11 +14,11 @@ public sealed class JsonEventExporter : BackgroundService
     private readonly ILogger<JsonEventExporter> _logger;
     private readonly string _filePath;
 
-    public JsonEventExporter(EventBus bus, ILogger<JsonEventExporter> logger)
+    public JsonEventExporter(EventBus bus, ILogger<JsonEventExporter> logger, ServerOptions config)
     {
         _bus = bus;
         _logger = logger;
-        _filePath = Path.Combine(AppContext.BaseDirectory, "events.log");
+        _filePath = Path.Combine(config.Metrics.Location, "events.log");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

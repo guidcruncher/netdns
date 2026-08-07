@@ -9,6 +9,8 @@ public sealed class MetricOptions
 
     public string StorageEngine { get; set; } = "";
 
+    public string Location { get; set; } = "";
+
     public string ListenAddress { get; set; } = "0.0.0.0";
     public int ListenPort { get; set; } = 1080;
 

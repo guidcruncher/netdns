@@ -5,6 +5,7 @@ using DnsForwarder.Events;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Threading.Channels;
 
 namespace DnsForwarder.Dns.Core;
 
@@ -16,6 +17,7 @@ public sealed class DnsServer : BackgroundService
     private readonly IDnsMetrics _metrics;
 
     private UdpClient? _udp;
+    private Channel<UdpReceiveResult>? _channel;
 
     public DnsServer(
         ILogger<DnsServer> logger,
@@ -41,14 +43,53 @@ public sealed class DnsServer : BackgroundService
             _options.Listen.Address,
             _options.Listen.Port);
 
+        // Create a bounded channel and worker pool to decouple receive from processing
+        _channel = Channel.CreateBounded<UdpReceiveResult>(new BoundedChannelOptions(4096)
+        {
+            FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = false,
+            SingleWriter = true
+        });
+
+        var workers = new List<Task>();
+        int workerCount = Math.Max(1, Environment.ProcessorCount);
+        for (int i = 0; i < workerCount; i++)
+        {
+            workers.Add(Task.Run(async () =>
+            {
+                var reader = _channel.Reader;
+                while (await reader.WaitToReadAsync(stoppingToken))
+                {
+                    UdpReceiveResult item;
+                    try
+                    {
+                        item = await reader.ReadAsync(stoppingToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+
+                    try
+                    {
+                        await HandleRequestAsync(item, stoppingToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error handling DNS request in worker");
+                    }
+                }
+            }, stoppingToken));
+        }
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 var result = await _udp.ReceiveAsync(stoppingToken);
 
-                // Fire-and-forget request handler
-                _ = HandleRequestAsync(result, stoppingToken);
+                // Enqueue for processing by worker pool
+                await _channel.Writer.WriteAsync(result, stoppingToken);
             }
             catch (OperationCanceledException)
             {
@@ -59,6 +100,10 @@ public sealed class DnsServer : BackgroundService
                 _logger.LogError(ex, "Error receiving DNS packet");
             }
         }
+
+        // Shutdown
+        _channel.Writer.Complete();
+        await Task.WhenAll(workers);
     }
 
     private async Task HandleRequestAsync(UdpReceiveResult result, CancellationToken ct)
@@ -81,20 +126,21 @@ public sealed class DnsServer : BackgroundService
             }
 
             // Forward to upstream resolver
-            var responseBytes = await _forwarder.ProcessAsync(
+            var response = await _forwarder.ProcessAsync(
                 result.Buffer,
                 result.RemoteEndPoint,
                 ct);
 
-            if (responseBytes is not null)
+            if (response is not null)
             {
+                // Send the received buffer (may be pooled)
                 await _udp!.SendAsync(
-                    responseBytes,
-                    responseBytes.Length,
+                    response.Buffer,
+                    response.Length,
                     result.RemoteEndPoint);
 
                 // Parse response for logging
-                var resp = DnsMessage.TryParse(responseBytes);
+                var resp = DnsMessage.TryParse(response.Buffer);
 
                 if (resp is not null)
                 {
@@ -107,6 +153,9 @@ public sealed class DnsServer : BackgroundService
                         Status: resp.ResponseCode.ToString(),
                         ResponseIp: resp.AnswerAddress));
                 }
+
+                // Return pooled buffer if applicable
+                response.Return();
             }
         }
         catch (Exception ex)

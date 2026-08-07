@@ -52,6 +52,30 @@ public sealed class DnsCache
             });
     }
 
+    // Try to return the pooled cached buffer directly (caller must not return it to the pool).
+    public bool TryGetPooled(string domain, out byte[]? buffer, out int length)
+    {
+        buffer = null;
+        length = 0;
+
+        if (_entries.TryGetValue(domain, out var entry))
+        {
+            if (DateTime.UtcNow < entry.Expires)
+            {
+                buffer = entry.Buffer;
+                length = entry.Length;
+                return true;
+            }
+
+            if (_entries.TryRemove(domain, out var removed))
+            {
+                ArrayPool<byte>.Shared.Return(removed.Buffer, clearArray: true);
+            }
+        }
+
+        return false;
+    }
+
     private sealed class CacheEntry
     {
         public byte[] Buffer { get; }

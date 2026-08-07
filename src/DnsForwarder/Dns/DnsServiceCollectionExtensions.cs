@@ -68,8 +68,7 @@ public static class DnsServiceCollectionExtensions
                 };
 
             // Pick one at random
-            var selected = resolvers[Random.Shared.Next(resolvers.Count)];
-
+            var selected = resolvers[0];
             var endpoint = new IPEndPoint(
                 IPAddress.Parse(selected.Address),
                 selected.Port);

@@ -40,7 +40,7 @@ public sealed class RuleEngine
 
         if (options.DefaultResolvers != null && options.DefaultResolvers.Count > 0)
         {
-            selected = options.DefaultResolvers[Random.Shared.Next(options.DefaultResolvers.Count)];
+	    selected = options.DefaultResolvers[0];
         }
         else
         {

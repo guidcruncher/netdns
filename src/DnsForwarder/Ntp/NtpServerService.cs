@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 
 using DnsForwarder.Events;
 
@@ -47,14 +49,13 @@ public sealed class NtpServerService : BackgroundService
 
             try
             {
-                result = await _udp.ReceiveAsync(stoppingToken);
+                result = await _udp.ReceiveAsync(stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
                 break;
             }
 
-            // Fire-and-forget request handler
             _ = Task.Run(() => HandleRequestAsync(result, stoppingToken), stoppingToken);
         }
     }
@@ -63,24 +64,21 @@ public sealed class NtpServerService : BackgroundService
     {
         try
         {
-            // Process NTP request
-            var response = await _handler.HandleAsync(result, _udp!, ct);
+            var response = await _handler.HandleAsync(result, _udp!, ct).ConfigureAwait(false);
 
-            // Emit NTP sync event
             _metrics.Sync(new NtpSyncEvent(
                 Timestamp: DateTime.UtcNow,
                 ClientIp: result.RemoteEndPoint.Address,
-                ClientName: null, // DHCP hostname integration optional
+                ClientName: null,
                 Offset: response.Offset,
                 Success: response.Success));
 
-            // Send response
             if (response.Bytes is not null)
             {
                 await _udp!.SendAsync(
                     response.Bytes,
                     response.Bytes.Length,
-                    result.RemoteEndPoint);
+                    result.RemoteEndPoint).ConfigureAwait(false);
             }
         }
         catch (Exception ex)

@@ -15,7 +15,7 @@ public sealed class SystemTimeSource : INtpTimeSource
         return Task.FromResult(new NtpTimeResult(
             UtcNow: now,
             Offset: TimeSpan.Zero,
-            Stratum: 16,            // System clock = unsynchronized
+            Stratum: 16,
             ReferenceUtc: _ref));
     }
 }

@@ -31,15 +31,15 @@ public sealed class UpstreamNtpTimeSource : INtpTimeSource, IAsyncDisposable
         _syncTask = Task.Run(() => SyncLoopAsync(_cts.Token));
     }
 
-    public async Task<NtpTimeResult> GetTimeAsync(CancellationToken ct)
+    public Task<NtpTimeResult> GetTimeAsync(CancellationToken ct)
     {
         var now = DateTime.UtcNow + _offset;
 
-        return new NtpTimeResult(
+        return Task.FromResult(new NtpTimeResult(
             UtcNow: now,
             Offset: _offset,
             Stratum: _stratum,
-            ReferenceUtc: _referenceUtc);
+            ReferenceUtc: _referenceUtc));
     }
 
     private async Task SyncLoopAsync(CancellationToken ct)
@@ -56,7 +56,7 @@ public sealed class UpstreamNtpTimeSource : INtpTimeSource, IAsyncDisposable
             {
                 try
                 {
-                    await SyncOnceAsync(server, ct);
+                    await SyncOnceAsync(server, ct).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -64,7 +64,8 @@ public sealed class UpstreamNtpTimeSource : INtpTimeSource, IAsyncDisposable
                 }
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(_options.PollIntervalSeconds), ct);
+            await Task.Delay(TimeSpan.FromSeconds(_options.PollIntervalSeconds), ct)
+                      .ConfigureAwait(false);
         }
     }
 
@@ -73,15 +74,15 @@ public sealed class UpstreamNtpTimeSource : INtpTimeSource, IAsyncDisposable
         using var udp = new UdpClient();
         udp.Client.ReceiveTimeout = 3000;
 
-        var ip = await System.Net.Dns.GetHostAddressesAsync(server, ct);
+        var ip = await System.Net.Dns.GetHostAddressesAsync(server, ct).ConfigureAwait(false);
         var endpoint = new IPEndPoint(ip[0], 123);
 
         var request = BuildClientRequest();
         var t1 = DateTime.UtcNow;
 
-        await udp.SendAsync(request, request.Length, endpoint);
+        await udp.SendAsync(request, request.Length, endpoint).ConfigureAwait(false);
 
-        var response = await udp.ReceiveAsync(ct);
+        var response = await udp.ReceiveAsync(ct).ConfigureAwait(false);
         var t4 = DateTime.UtcNow;
 
         ParseResponse(response.Buffer, t1, t4);
@@ -125,7 +126,14 @@ public sealed class UpstreamNtpTimeSource : INtpTimeSource, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         _cts.Cancel();
-        try { await _syncTask; } catch { }
+        try
+        {
+            await _syncTask.ConfigureAwait(false);
+        }
+        catch
+        {
+        }
+
         _cts.Dispose();
     }
 }

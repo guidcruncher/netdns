@@ -1,5 +1,7 @@
 using System.Buffers.Binary;
+
 using DnsForwarder.Dns.Core;
+
 using Xunit;
 
 namespace DnsForwarder.Dns.Tests

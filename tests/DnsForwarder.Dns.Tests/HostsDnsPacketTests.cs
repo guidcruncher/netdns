@@ -17,15 +17,19 @@ public class HostsDnsPacketTests
     {
         var opts = new DnsForwarderOptions
         {
-            DefaultResolver = new UpstreamResolverOptions
+            // UPDATED: DefaultResolvers replaces DefaultResolver
+            DefaultResolvers =
             {
-                Name = "default",
-                Address = "1.1.1.1",
-                Port = 53
+                new UpstreamResolverOptions
+                {
+                    Name = "default",
+                    Address = "1.1.1.1",
+                    Port = 53
+                }
             }
         };
 
-        var logger = NullLogger<DnsForwarder.Dns.RuleEngine.RuleEngine>.Instance;
+        var logger = NullLogger<RuleEngine.RuleEngine>.Instance;
         var engine = new RuleEngine.RuleEngine(opts, logger);
 
         // Inject hosts entry directly

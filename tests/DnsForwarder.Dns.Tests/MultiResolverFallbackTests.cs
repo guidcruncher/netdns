@@ -12,13 +12,18 @@ public sealed class MultiResolverFallbackTests
     {
         var options = new DnsForwarderOptions
         {
-            DefaultResolver = new UpstreamResolverOptions
+            // UPDATED: DefaultResolvers replaces DefaultResolver
+            DefaultResolvers =
             {
-                Address = "127.0.0.1",
-                Port = 5300,
-                Rule = "*.fallback.test",
-                Name = "default"
+                new UpstreamResolverOptions
+                {
+                    Address = "127.0.0.1",
+                    Port = 5300,
+                    Rule = "*.fallback.test",
+                    Name = "default"
+                }
             },
+
             Resolvers = new List<UpstreamResolverOptions>
             {
                 new()
@@ -57,5 +62,4 @@ public sealed class MultiResolverFallbackTests
         // Secondary is NOT included unless its rule matches
         Assert.Single(result.Upstreams);
     }
-
 }

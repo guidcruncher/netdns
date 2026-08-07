@@ -23,15 +23,20 @@ public class BlockResponseTests
                 StaticIp = ip,
                 Ttl = 60
             },
-            DefaultResolver = new UpstreamResolverOptions
+
+            // UPDATED: DefaultResolvers replaces DefaultResolver
+            DefaultResolvers =
             {
-                Name = "default",
-                Address = "1.1.1.1",
-                Port = 53
+                new UpstreamResolverOptions
+                {
+                    Name = "default",
+                    Address = "1.1.1.1",
+                    Port = 53
+                }
             }
         };
 
-        var logger = NullLogger<RuleEngine.RuleEngine>.Instance;
+        var logger = NullLogger<DnsForwarder.Dns.RuleEngine.RuleEngine>.Instance;
         var engine = new DnsForwarder.Dns.RuleEngine.RuleEngine(opts, logger);
 
         engine.AddRules(new[]

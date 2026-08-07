@@ -1,9 +1,9 @@
+using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 
 using DnsForwarder.Dhcp;
 
-using System.Linq;
 using Xunit;
 
 namespace DnsForwarder.Dhcp.Tests;

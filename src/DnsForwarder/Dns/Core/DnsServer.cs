@@ -1,11 +1,11 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Channels;
 
 using DnsForwarder.Events;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Threading.Channels;
 
 namespace DnsForwarder.Dns.Core;
 

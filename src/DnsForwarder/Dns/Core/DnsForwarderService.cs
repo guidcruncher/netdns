@@ -1,9 +1,9 @@
+using System.Buffers;
 using System.Net;
 
 using DnsForwarder.Events;
 
 using Microsoft.Extensions.Logging;
-using System.Buffers;
 
 namespace DnsForwarder.Dns.Core;
 
@@ -78,63 +78,63 @@ public sealed class DnsForwarderService
             blocked[0] = request[0];
             blocked[1] = request[1];
 
-                // Wrap in non-pooled PooledBuffer
-                return new PooledBuffer(blocked, blocked.Length, fromPool: false);
-            }
-
-            var active = ruleResult.Upstreams[0];
-
-            // --- CACHE CHECK (pooled) ---
-            if (_ruleEngine.Cache.TryGetPooled(q.Name, out var cachedBuf, out var cachedLen))
-            {
-                _metrics.RecordDnsCacheHit();
-
-                _logger.LogInformation(
-                    "Request {RequestId}: Cache HIT for {Domain} (served without forwarding)",
-                    requestId,
-                    q.Name);
-
-                // Rent a send buffer from the pool to avoid allocating a new array per-hit
-                var sendBuf = ArrayPool<byte>.Shared.Rent(cachedLen);
-                // cachedBuf is non-null when TryGetPooled returned true
-                Buffer.BlockCopy(cachedBuf!, 0, sendBuf, 0, cachedLen);
-
-                // PATCH DNS ID
-                sendBuf[0] = request[0];
-                sendBuf[1] = request[1];
-
-                return new PooledBuffer(sendBuf, cachedLen, fromPool: true);
-            }
-
-            _logger.LogInformation(
-                "Request {RequestId}: Cache MISS for {Domain} (forwarding to upstream {Upstream})",
-                requestId,
-                q.Name,
-                active.Name);
-
-            _logger.LogInformation(
-                "Request {RequestId}: Forwarding {Domain} ({Type}) from {Remote} to upstream {Upstream}",
-                requestId,
-                q.Name,
-                q.Type,
-                remote,
-                active.Name);
-
-            // --- FORWARD + FALLBACK ---
-            var response = await _ruleEngine.QueryAsync(q.Name, request, requestId, ct);
-
-            _logger.LogInformation(
-                "Request {RequestId}: Completed DNS query for {Domain} from {Remote} using upstream {Upstream}",
-                requestId,
-                q.Name,
-                remote,
-                active.Name);
-
-            // Patch DNS ID in returned response (response may be a fresh array)
-            response[0] = request[0];
-            response[1] = request[1];
-
-            // Wrap response as non-pooled buffer (caller will not return it)
-            return new PooledBuffer(response, response.Length, fromPool: false);
+            // Wrap in non-pooled PooledBuffer
+            return new PooledBuffer(blocked, blocked.Length, fromPool: false);
         }
+
+        var active = ruleResult.Upstreams[0];
+
+        // --- CACHE CHECK (pooled) ---
+        if (_ruleEngine.Cache.TryGetPooled(q.Name, out var cachedBuf, out var cachedLen))
+        {
+            _metrics.RecordDnsCacheHit();
+
+            _logger.LogInformation(
+                "Request {RequestId}: Cache HIT for {Domain} (served without forwarding)",
+                requestId,
+                q.Name);
+
+            // Rent a send buffer from the pool to avoid allocating a new array per-hit
+            var sendBuf = ArrayPool<byte>.Shared.Rent(cachedLen);
+            // cachedBuf is non-null when TryGetPooled returned true
+            Buffer.BlockCopy(cachedBuf!, 0, sendBuf, 0, cachedLen);
+
+            // PATCH DNS ID
+            sendBuf[0] = request[0];
+            sendBuf[1] = request[1];
+
+            return new PooledBuffer(sendBuf, cachedLen, fromPool: true);
+        }
+
+        _logger.LogInformation(
+            "Request {RequestId}: Cache MISS for {Domain} (forwarding to upstream {Upstream})",
+            requestId,
+            q.Name,
+            active.Name);
+
+        _logger.LogInformation(
+            "Request {RequestId}: Forwarding {Domain} ({Type}) from {Remote} to upstream {Upstream}",
+            requestId,
+            q.Name,
+            q.Type,
+            remote,
+            active.Name);
+
+        // --- FORWARD + FALLBACK ---
+        var response = await _ruleEngine.QueryAsync(q.Name, request, requestId, ct);
+
+        _logger.LogInformation(
+            "Request {RequestId}: Completed DNS query for {Domain} from {Remote} using upstream {Upstream}",
+            requestId,
+            q.Name,
+            remote,
+            active.Name);
+
+        // Patch DNS ID in returned response (response may be a fresh array)
+        response[0] = request[0];
+        response[1] = request[1];
+
+        // Wrap response as non-pooled buffer (caller will not return it)
+        return new PooledBuffer(response, response.Length, fromPool: false);
+    }
 }

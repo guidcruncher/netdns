@@ -13,15 +13,18 @@ public sealed class HostsTimeoutTests
     {
         var options = new DnsForwarderOptions
         {
-            DefaultResolver = new UpstreamResolverOptions
+            // UPDATED: DefaultResolvers replaces DefaultResolver
+            DefaultResolvers =
             {
-                Address = "127.0.0.1",
-                Port = 5300,
-                Rule = "*.test",
-                Name = "default"
+                new UpstreamResolverOptions
+                {
+                    Address = "127.0.0.1",
+                    Port = 5300,
+                    Rule = "*.test",
+                    Name = "default"
+                }
             }
         };
-
 
         var logger = NullLogger<DnsForwarder.Dns.RuleEngine.RuleEngine>.Instance;
         var engine = new DnsForwarder.Dns.RuleEngine.RuleEngine(options, logger);

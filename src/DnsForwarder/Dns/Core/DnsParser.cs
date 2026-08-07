@@ -81,6 +81,10 @@ public static class DnsParser
             });
         }
 
+        // Ensure ResponseCode is set from header RCODE (last 4 bits)
+        ushort headerFlags = BinaryPrimitives.ReadUInt16BigEndian(buffer.AsSpan(2));
+        msg.ResponseCode = ((headerFlags & 0x000F)).ToString();
+
         return msg;
     }
 

@@ -1,3 +1,5 @@
+using System.Net;
+
 using DnsForwarder.Dhcp.Bootstrap;
 using DnsForwarder.Dns.Bootstrap;
 using DnsForwarder.Events.Bootstrap;
@@ -5,6 +7,8 @@ using DnsForwarder.Metrics;
 using DnsForwarder.Metrics.Bootstrap;
 using DnsForwarder.Ntp.Bootstrap;
 
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -83,7 +87,7 @@ public class Program
         }
 
         //
-        // FIXED: Start Prometheus sidecar HTTP server if enabled
+        // Start Prometheus sidecar HTTP server if enabled
         //
         var serverOptions = host.Services.GetRequiredService<IConfiguration>()
             .GetSection("Server").Get<ServerOptions>() ?? new ServerOptions();
@@ -95,6 +99,13 @@ public class Program
             // Share DI with main host
             metricsAppBuilder.Services.AddSingleton(
                 host.Services.GetRequiredService<MetricsRegistry>());
+            var metricsPort = serverOptions.Metrics.ListenPort;
+            var metricsIpAddress = IPAddress.Parse(serverOptions.Metrics.ListenAddress);
+
+            metricsAppBuilder.WebHost.ConfigureKestrel(serverOptions =>
+            {
+                serverOptions.Listen(metricsIpAddress, metricsPort);
+            });
 
             var metricsApp = metricsAppBuilder.Build();
 

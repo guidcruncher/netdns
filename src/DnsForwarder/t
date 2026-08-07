@@ -1,0 +1,19 @@
+var builder = WebApplication.CreateBuilder(args);
+
+// Read the custom configuration values
+var ipAddressString = builder.Configuration.GetValue<string>("ServerSettings:IpAddress") ?? "127.0.0.1";
+var port = serverOptions.Metrics.ListenPort;
+
+var ipAddress = IPAddress.Parse(serverOptions.Metrics.ListenAddress);
+
+// Configure the web host (Kestrel) to listen on the specified IP and Port
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.Listen(ipAddress, port);
+});
+
+var app = builder.Build();
+
+app.MapGet("/", () => "Server is running on configured IP and Port.");
+
+app.Run();

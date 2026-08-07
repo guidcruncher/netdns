@@ -313,8 +313,8 @@ public sealed class RuleEngine
         if (block != null)
         {
             _logger.LogInformation("Request {RequestId}: Blocking domain {Domain} due to rule {Rule}",
-                requestId, domain, block.Name);
-            return new RuleResult(new List<UpstreamEntry> { block }, true);
+                requestId, domain, block.Value.Name);
+            return new RuleResult(new List<UpstreamEntry> { block.Value }, true);
         }
 
         if (_fallback.Count > 0)

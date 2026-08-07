@@ -23,8 +23,7 @@ public static class ServiceRegistration
 
         logger.LogInformation("Loading ServerOptions…");
 
-        var serverOptions = new ServerOptions();
-        ctx.Configuration.Bind(serverOptions);
+        var serverOptions = ctx.Configuration.Get<ServerOptions>() ?? new ServerOptions();
         services.AddSingleton<ServerOptions>(serverOptions);
 
 

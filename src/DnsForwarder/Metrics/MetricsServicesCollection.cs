@@ -11,8 +11,7 @@ public static class MetricsServiceCollectionExtensions
     public static IServiceCollection AddMetricServices(
         this IServiceCollection services, IConfiguration config)
     {
-        // Bind ServerOptions from configuration
-        var server = config.GetSection("Server").Get<ServerOptions>() ?? new ServerOptions();
+        var server = config.Get<ServerOptions>() ?? new ServerOptions();
         var metrics = server.Metrics;
 
         // Always register the registry (safe, lightweight)

@@ -2,8 +2,6 @@ using System.Net;
 
 using DnsForwarder.Dhcp;
 
-using FluentAssertions;
-
 using Microsoft.Extensions.Logging.Abstractions;
 
 using Xunit;
@@ -46,9 +44,9 @@ public class ServerEngineTests
             // expected
         }
 
-        fakeUdp.SentPackets.Should().NotBeEmpty();
+        Assert.NotEmpty(fakeUdp.SentPackets);
 
         var parsed = DhcpPacketCodec.Parse(fakeUdp.SentPackets.First());
-        parsed.GetMessageType().Should().Be(DhcpMessageType.Offer);
+        Assert.Equal(DhcpMessageType.Offer, parsed.GetMessageType());
     }
 }

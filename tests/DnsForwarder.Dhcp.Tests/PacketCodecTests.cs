@@ -2,8 +2,6 @@ using System.Net;
 
 using DnsForwarder.Dhcp;
 
-using FluentAssertions;
-
 using Xunit;
 
 namespace DnsForwarder.Dhcp.Tests;
@@ -24,7 +22,7 @@ public class PacketCodecTests
             TimeSpan.FromHours(1));
 
         var parsed = DhcpPacketCodec.Parse(offer);
-        parsed.GetMessageType().Should().Be(DhcpMessageType.Offer);
+        Assert.Equal(DhcpMessageType.Offer, parsed.GetMessageType());
     }
 
     [Fact]
@@ -41,7 +39,7 @@ public class PacketCodecTests
             TimeSpan.FromHours(1));
 
         var parsed = DhcpPacketCodec.Parse(ack);
-        parsed.Yiaddr.ToString().Should().Be("192.168.10.55");
+        Assert.Equal("192.168.10.55", parsed.Yiaddr.ToString());
     }
 
     [Fact]

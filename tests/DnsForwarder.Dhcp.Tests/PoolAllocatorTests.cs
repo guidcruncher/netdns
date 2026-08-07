@@ -2,8 +2,7 @@ using System.Net;
 
 using DnsForwarder.Dhcp;
 
-using FluentAssertions;
-
+using System.Linq;
 using Xunit;
 
 
@@ -18,8 +17,8 @@ public class PoolAllocatorTests
 
         var ip = pool.Allocate(new IPAddress[0]);
 
-        ip.Should().NotBeNull();
-        ip!.ToString().Should().Be("192.168.10.1");
+        Assert.NotNull(ip);
+        Assert.Equal("192.168.10.1", ip!.ToString());
     }
 
     [Fact]
@@ -29,7 +28,7 @@ public class PoolAllocatorTests
 
         var seq = pool.AllocationSequence(new IPAddress[0]);
 
-        seq.Should().HaveCount(6);
-        seq.First().ToString().Should().Be("192.168.10.1");
+        Assert.Equal(6, seq.Count());
+        Assert.Equal("192.168.10.1", seq.First().ToString());
     }
 }

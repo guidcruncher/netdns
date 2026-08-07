@@ -96,7 +96,8 @@ public sealed class DnsForwarderService
 
                 // Rent a send buffer from the pool to avoid allocating a new array per-hit
                 var sendBuf = ArrayPool<byte>.Shared.Rent(cachedLen);
-                Buffer.BlockCopy(cachedBuf, 0, sendBuf, 0, cachedLen);
+                // cachedBuf is non-null when TryGetPooled returned true
+                Buffer.BlockCopy(cachedBuf!, 0, sendBuf, 0, cachedLen);
 
                 // PATCH DNS ID
                 sendBuf[0] = request[0];

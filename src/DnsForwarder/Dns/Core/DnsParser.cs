@@ -4,7 +4,6 @@ namespace DnsForwarder.Dns.Core;
 
 public static class DnsParser
 {
-    // NOTE: This is a simplified parser; for production use a mature DNS library.
     public static DnsMessage Parse(byte[] buffer)
     {
         var msg = new DnsMessage();

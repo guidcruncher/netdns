@@ -1,5 +1,7 @@
 using System.Net;
 
+using DnsForwarder.Events;
+
 using Microsoft.Extensions.Logging;
 
 namespace DnsForwarder.Dns.Core;
@@ -10,17 +12,20 @@ public sealed class DnsForwarderService
     private readonly DnsForwarderOptions _options;
     private readonly IDnsClient _defaultClient;
     private readonly RuleEngine.RuleEngine _ruleEngine;
+    private readonly IDnsMetrics _metrics;
 
     public DnsForwarderService(
         ILogger<DnsForwarderService> logger,
         DnsForwarderOptions options,
         IDnsClient defaultClient,
-        RuleEngine.RuleEngine ruleEngine)
+        RuleEngine.RuleEngine ruleEngine,
+        IDnsMetrics metrics)
     {
         _logger = logger;
         _options = options;
         _defaultClient = defaultClient;
         _ruleEngine = ruleEngine;
+        _metrics = metrics;
     }
 
     public async Task<byte[]?> ProcessAsync(
@@ -80,6 +85,8 @@ public sealed class DnsForwarderService
         // --- CACHE CHECK ---
         if (_ruleEngine.Cache.TryGet(q.Name, out var cachedResponse) && cachedResponse is not null)
         {
+            _metrics.RecordDnsCacheHit();
+
             _logger.LogInformation(
                 "Request {RequestId}: Cache HIT for {Domain} (served without forwarding)",
                 requestId,

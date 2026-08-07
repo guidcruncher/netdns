@@ -14,9 +14,10 @@ public static class MetricsServiceCollectionExtensions
         var server = config.Get<ServerOptions>() ?? new ServerOptions();
         var metrics = server.Metrics;
 
-        // Always register the registry (safe, lightweight)
         services.AddSingleton<MetricsRegistry>();
         services.AddSingleton<IEventConsumer, MetricsEventConsumer>();
+
+        services.AddHostedService<EventDispatcherService>();
 
         return services;
     }

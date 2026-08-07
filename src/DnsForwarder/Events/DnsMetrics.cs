@@ -9,12 +9,15 @@ public sealed class DnsMetrics : IDnsMetrics
         _bus = bus;
     }
 
-    public void Query(DnsQueryEvent evt)
+    public void RecordDnsQuery(DnsQueryEvent evt)
         => _bus.Publish(evt);
 
-    public void Response(DnsResponseEvent evt)
+    public void RecordDnsResponse(DnsResponseEvent evt)
         => _bus.Publish(evt);
 
-    public void UpstreamLatency(DnsUpstreamLatencyEvent evt)
-        => _bus.Publish(evt);
+    public void RecordDnsCacheHit()
+        => _bus.Publish(new DnsCacheHitEvent());
+
+    public void RecordDnsLatency(double seconds)
+        => _bus.Publish(new DnsLatencyEvent(seconds));
 }

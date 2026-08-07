@@ -16,14 +16,9 @@ public static class MetricsServiceCollectionExtensions
 
         // Always register the registry (safe, lightweight)
         services.AddSingleton<MetricsRegistry>();
-
-
-        // Conditionally enable Prometheus
-        if (string.Equals(metrics.StorageEngine, "prometheus", StringComparison.OrdinalIgnoreCase))
-        {
-            services.AddHostedService<PrometheusMetricsExporter>();
-        }
+        services.AddSingleton<IEventConsumer, MetricsEventConsumer>();
 
         return services;
     }
 }
+

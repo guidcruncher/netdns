@@ -1,8 +1,12 @@
+
+
 namespace DnsForwarder.Events;
 
 public interface IDnsMetrics
 {
-    void Query(DnsQueryEvent evt);
-    void Response(DnsResponseEvent evt);
-    void UpstreamLatency(DnsUpstreamLatencyEvent evt);
+    void RecordDnsQuery(DnsQueryEvent evt);
+    void RecordDnsResponse(DnsResponseEvent evt);
+
+    void RecordDnsCacheHit();
+    void RecordDnsLatency(double seconds);
 }

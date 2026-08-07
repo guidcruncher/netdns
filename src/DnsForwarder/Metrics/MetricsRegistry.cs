@@ -1,3 +1,5 @@
+using System.Text;
+
 using DnsForwarder.Events;
 
 namespace DnsForwarder.Metrics;
@@ -9,6 +11,15 @@ public sealed class MetricsRegistry
     private long _dnsNxDomainTotal;
     private long _dnsServFailTotal;
 
+    private long _dnsCacheHitsTotal;
+
+    private readonly double[] _dnsLatencyBuckets =
+        new double[] { 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2 };
+
+    private readonly long[] _dnsLatencyCounts;
+    private double _dnsLatencySum;
+    private long _dnsLatencyTotalCount;
+
     private long _dhcpLeaseAllocationsTotal;
     private long _dhcpLeasesActive;
 
@@ -17,6 +28,15 @@ public sealed class MetricsRegistry
     private double _ntpOffsetMs;
 
     private readonly object _lock = new();
+
+    public MetricsRegistry()
+    {
+        _dnsLatencyCounts = new long[_dnsLatencyBuckets.Length];
+    }
+
+    // -----------------------------
+    // DNS Metrics
+    // -----------------------------
 
     public void RecordDnsQuery(DnsQueryEvent evt)
     {
@@ -39,6 +59,36 @@ public sealed class MetricsRegistry
         }
     }
 
+    public void RecordDnsCacheHit()
+    {
+        lock (_lock)
+        {
+            _dnsCacheHitsTotal++;
+        }
+    }
+
+    public void RecordDnsLatency(double seconds)
+    {
+        lock (_lock)
+        {
+            _dnsLatencySum += seconds;
+            _dnsLatencyTotalCount++;
+
+            for (int i = 0; i < _dnsLatencyBuckets.Length; i++)
+            {
+                if (seconds <= _dnsLatencyBuckets[i])
+                {
+                    _dnsLatencyCounts[i]++;
+                    break;
+                }
+            }
+        }
+    }
+
+    // -----------------------------
+    // DHCP Metrics
+    // -----------------------------
+
     public void RecordDhcpLeaseAllocated(DhcpLeaseAllocatedEvent evt)
     {
         lock (_lock)
@@ -57,6 +107,10 @@ public sealed class MetricsRegistry
         }
     }
 
+    // -----------------------------
+    // NTP Metrics
+    // -----------------------------
+
     public void RecordNtpSync(NtpSyncEvent evt)
     {
         lock (_lock)
@@ -69,12 +123,17 @@ public sealed class MetricsRegistry
         }
     }
 
+    // -----------------------------
+    // Prometheus Output
+    // -----------------------------
+
     public string RenderPrometheus()
     {
         lock (_lock)
         {
-            var sb = new System.Text.StringBuilder();
+            var sb = new StringBuilder();
 
+            // DNS Counters
             sb.AppendLine("# HELP dns_queries_total Total number of DNS queries.");
             sb.AppendLine("# TYPE dns_queries_total counter");
             sb.AppendLine($"dns_queries_total {_dnsQueriesTotal}");
@@ -91,6 +150,27 @@ public sealed class MetricsRegistry
             sb.AppendLine("# TYPE dns_servfail_total counter");
             sb.AppendLine($"dns_servfail_total {_dnsServFailTotal}");
 
+            sb.AppendLine("# HELP dns_cache_hits_total Total number of DNS cache hits.");
+            sb.AppendLine("# TYPE dns_cache_hits_total counter");
+            sb.AppendLine($"dns_cache_hits_total {_dnsCacheHitsTotal}");
+
+            // DNS Latency Histogram
+            sb.AppendLine("# HELP dns_latency_seconds DNS query latency in seconds.");
+            sb.AppendLine("# TYPE dns_latency_seconds histogram");
+
+            long cumulative = 0;
+            for (int i = 0; i < _dnsLatencyBuckets.Length; i++)
+            {
+                cumulative += _dnsLatencyCounts[i];
+                sb.AppendLine(
+                    $"dns_latency_seconds_bucket{{le=\"{_dnsLatencyBuckets[i]}\"}} {cumulative}"
+                );
+            }
+
+            sb.AppendLine($"dns_latency_seconds_sum {_dnsLatencySum}");
+            sb.AppendLine($"dns_latency_seconds_count {_dnsLatencyTotalCount}");
+
+            // DHCP
             sb.AppendLine("# HELP dhcp_lease_allocations_total Total number of DHCP lease allocations.");
             sb.AppendLine("# TYPE dhcp_lease_allocations_total counter");
             sb.AppendLine($"dhcp_lease_allocations_total {_dhcpLeaseAllocationsTotal}");
@@ -99,6 +179,7 @@ public sealed class MetricsRegistry
             sb.AppendLine("# TYPE dhcp_leases_active gauge");
             sb.AppendLine($"dhcp_leases_active {_dhcpLeasesActive}");
 
+            // NTP
             sb.AppendLine("# HELP ntp_sync_total Total number of NTP sync attempts.");
             sb.AppendLine("# TYPE ntp_sync_total counter");
             sb.AppendLine($"ntp_sync_total {_ntpSyncTotal}");

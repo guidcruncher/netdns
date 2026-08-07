@@ -63,6 +63,8 @@ public sealed class DnsServer : BackgroundService
 
     private async Task HandleRequestAsync(UdpReceiveResult result, CancellationToken ct)
     {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
         try
         {
             // Parse DNS query for logging
@@ -70,7 +72,7 @@ public sealed class DnsServer : BackgroundService
 
             if (parsed is not null)
             {
-                _metrics.Query(new DnsQueryEvent(
+                _metrics.RecordDnsQuery(new DnsQueryEvent(
                     Timestamp: DateTime.UtcNow,
                     ClientIp: result.RemoteEndPoint.Address,
                     ClientName: null, // DHCP hostname integration optional
@@ -96,7 +98,7 @@ public sealed class DnsServer : BackgroundService
 
                 if (resp is not null)
                 {
-                    _metrics.Response(new DnsResponseEvent(
+                    _metrics.RecordDnsResponse(new DnsResponseEvent(
                         Timestamp: DateTime.UtcNow,
                         ClientIp: result.RemoteEndPoint.Address,
                         ClientName: null,
@@ -113,6 +115,12 @@ public sealed class DnsServer : BackgroundService
                 ex,
                 "Error processing DNS request from {Remote}",
                 result.RemoteEndPoint);
+        }
+        finally
+        {
+            sw.Stop();
+
+            _metrics.RecordDnsLatency(sw.Elapsed.TotalSeconds);
         }
     }
 

@@ -21,7 +21,7 @@ public sealed class RuleEngine
     private readonly Dictionary<string, CompiledRule> _exact = new(StringComparer.OrdinalIgnoreCase);
     private readonly SuffixTrie _suffix = new();
     private readonly PrefixTrie _prefix = new();
-    private readonly AhoCorasickMatcher _aho = new();
+    private readonly GenericAhoCorasickMatcher<CompiledRule> _aho = new();
     private readonly List<CompiledRule> _regex = new();
     private readonly List<UpstreamEntry> _fallback = new();
 
@@ -125,8 +125,10 @@ public sealed class RuleEngine
 
         response.AddRange(new byte[] { 0x00, 0x01 }); // CLASS IN
 
-        // TTL
-        response.AddRange(BitConverter.GetBytes(IPAddress.HostToNetworkOrder(_options.BlockResponse.Ttl)));
+        // TTL (big-endian)
+        var ttlBytes = new byte[4];
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(ttlBytes, _options.BlockResponse.Ttl);
+        response.AddRange(ttlBytes);
 
         // RDLENGTH + RDATA
         response.Add(0x00);
@@ -174,9 +176,10 @@ public sealed class RuleEngine
         }
         else
         {
+            // Avoid RegexOptions.Compiled for many patterns — use interpreted regex to reduce JIT/native-code overhead
             _regex.Add(rule with
             {
-                Regex = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase)
+                Regex = new Regex(pattern, RegexOptions.IgnoreCase)
             });
         }
     }

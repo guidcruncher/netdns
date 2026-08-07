@@ -28,8 +28,7 @@ public sealed class DnsMessage
     {
         try
         {
-            var reader = new DnsMessageReader(buffer);
-            return reader.Parse();
+            return DnsParser.Parse(buffer);
         }
         catch
         {

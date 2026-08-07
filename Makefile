@@ -6,12 +6,15 @@ TESTSNTP = tests/DnsForwarder.Ntp.Tests/DnsForwarder.Ntp.Tests.csproj
 BUILD_DIR = bin/
 RUNTIME = linux-x64
 
-.PHONY: all build clean run test restore publish dev benchmark format dig
+.PHONY: all build clean run test restore publish metrics dev benchmark format dig
 
 all: restore build
 
 dig:
 	dig itv.com @127.0.0.1 -p 1053
+
+metrics:
+	curl http://127.0.0.1:1080/metrics  -v
 
 restore:
 	dotnet restore $(SOLUTION)

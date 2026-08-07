@@ -12,4 +12,7 @@ public sealed class ServerOptions
     public DhcpOptions Dhcp { get; set; } = new();
 
     public NtpServerOptions Ntp { get; set; } = new();
+
+    public MetricOptions Metrics { get; set; } = new();
+
 }

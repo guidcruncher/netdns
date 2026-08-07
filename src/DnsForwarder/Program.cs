@@ -1,11 +1,6 @@
-using DnsForwarder.Dhcp.Bootstrap;
-using DnsForwarder.Dns.Bootstrap;
-using DnsForwarder.Ntp.Bootstrap;
+using DnsForwarder.Hosting;
 
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace DnsForwarder;
 
@@ -24,55 +19,12 @@ public class Program
             })
             .Build();
 
-        var host = Host.CreateDefaultBuilder(args)
-            .ConfigureAppConfiguration((ctx, config) =>
-            {
-                var env = cmd["DOTNET_ENVIRONMENT"]
-                          ?? ctx.HostingEnvironment.EnvironmentName;
+        var host = HostBuilderFactory.Build(args, cmd);
 
-                config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-                config.AddJsonFile($"appsettings.{env}.json", optional: true, reloadOnChange: true);
+        await RuntimeLoader.LoadAsync(host);
 
-                if (env.Equals("Docker", StringComparison.OrdinalIgnoreCase))
-                    config.AddJsonFile("appsettings.Docker.json", optional: true, reloadOnChange: true);
-
-                if (cmd["ConfigPath"] is string customConfig && !string.IsNullOrWhiteSpace(customConfig))
-                    config.AddJsonFile(customConfig, optional: false, reloadOnChange: true);
-
-                config.AddEnvironmentVariables();
-                config.AddConfiguration(cmd);
-            })
-            .ConfigureLogging((ctx, logging) =>
-            {
-                logging.ClearProviders();
-                logging.AddConsole();
-
-                var level = ctx.Configuration["Logging:Level"] ?? "Information";
-                logging.SetMinimumLevel(Enum.Parse<LogLevel>(level, ignoreCase: true));
-            })
-            .ConfigureServices((ctx, services) =>
-            {
-                services.AddDnsForwarder(ctx.Configuration);
-                services.AddDhcpServer(ctx.Configuration);
-                services.AddNtpServer(ctx.Configuration);
-            })
-            .Build();
-
-        //
-        // Runtime loading (DNS + DHCP)
-        //
-        var scopeFactory = host.Services.GetRequiredService<IServiceScopeFactory>();
-
-        using (var scope = scopeFactory.CreateScope())
-        {
-            var dnsLoader = new DnsForwarderRuntimeLoader(
-                scope.ServiceProvider.GetRequiredService<IConfiguration>());
-            await dnsLoader.LoadAsync(scope.ServiceProvider);
-
-            var dhcpLoader = new DhcpRuntimeLoader(
-                scope.ServiceProvider.GetRequiredService<IConfiguration>());
-            await dhcpLoader.LoadAsync(scope.ServiceProvider);
-        }
+        var serverOptions = host.Services.GetRequiredService<ServerOptions>();
+        MetricsSidecar.StartIfEnabled(host, serverOptions, args);
 
         await host.RunAsync();
     }

@@ -1,3 +1,4 @@
+
 using System.Buffers.Binary;
 using System.Net.Sockets;
 
@@ -9,6 +10,6 @@ namespace DnsForwarder.Ntp;
 
 public interface INtpRequestHandler
 {
-    Task HandleAsync(UdpReceiveResult result, UdpClient udp, CancellationToken ct);
+    Task<NtpResponse> HandleAsync(UdpReceiveResult result, UdpClient udp, CancellationToken ct);
 }
 

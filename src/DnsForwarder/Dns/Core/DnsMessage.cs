@@ -1,15 +1,40 @@
+using System.Net;
+
 namespace DnsForwarder.Dns.Core;
 
 public sealed class DnsMessage
 {
     public ushort Id { get; set; }
     public bool IsResponse { get; set; }
+
     public List<DnsQuestion> Questions { get; } = new();
     public List<DnsResourceRecord> Answers { get; } = new();
 
+    // Metrics fields
+    public string ResponseCode { get; set; } = "NOERROR";
+    public IPAddress? AnswerAddress { get; set; }
+
+    // Convenience properties for DNS server + metrics
+    public string QuestionName
+        => Questions.Count > 0 ? Questions[0].Name : string.Empty;
+
+    public string QuestionType
+        => Questions.Count > 0 ? Questions[0].Type.ToString() : string.Empty;
+
     public int GetMinTtl()
+        => Answers.Count == 0 ? 60 : Answers.Min(a => a.Ttl);
+
+    public static DnsMessage? TryParse(byte[] buffer)
     {
-        return Answers.Count == 0 ? 60 : Answers.Min(a => a.Ttl);
+        try
+        {
+            var reader = new DnsMessageReader(buffer);
+            return reader.Parse();
+        }
+        catch
+        {
+            return null;
+        }
     }
 }
 

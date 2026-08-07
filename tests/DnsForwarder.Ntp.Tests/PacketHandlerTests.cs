@@ -13,10 +13,16 @@ using Xunit;
 
 public class PacketHandlerTests
 {
-    private sealed class FakeTimeSource : ITimeSource
+    private sealed class FakeTimeSource : INtpTimeSource
     {
-        public DateTime UtcNow => new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        public DateTime ReferenceUtc => new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        public Task<NtpTimeResult> GetTimeAsync(CancellationToken ct)
+        {
+            return Task.FromResult(new NtpTimeResult(
+                UtcNow: DateTime.UtcNow,
+                Offset: TimeSpan.Zero,
+                Stratum: 1,
+                ReferenceUtc: DateTime.UtcNow));
+        }
     }
 
     [Fact]
@@ -24,8 +30,7 @@ public class PacketHandlerTests
     {
         var handler = new NtpRequestHandler(
             NullLogger<NtpRequestHandler>.Instance,
-            new FakeTimeSource(),
-            new NtpServerOptions()
+            new FakeTimeSource()
         );
 
         var packet = new byte[48];
@@ -46,8 +51,7 @@ public class PacketHandlerTests
     {
         var handler = new NtpRequestHandler(
             NullLogger<NtpRequestHandler>.Instance,
-            new FakeTimeSource(),
-            new NtpServerOptions()
+            new FakeTimeSource()
         );
 
         var packet = new byte[48];

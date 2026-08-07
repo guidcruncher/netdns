@@ -29,7 +29,8 @@ public class ServerEngineTests
 
         var logger = NullLogger<DhcpServerEngine>.Instance;
         var fakeUdp = new FakeUdpClient();
-        var engine = new DhcpServerEngine(logger, opts, store, fakeUdp);
+        var metrics = new FakeDhcpMetrics();
+        var engine = new DhcpServerEngine(logger, opts, store, fakeUdp, metrics, testMode: true);
 
         var discoverBytes = PacketFactory.DiscoverBytes();
         await fakeUdp.InjectReceive(discoverBytes);

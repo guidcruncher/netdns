@@ -131,15 +131,16 @@ public sealed class DnsServer : BackgroundService
                 result.RemoteEndPoint,
                 ct);
 
-            if (responseBytes is not null)
+            if (response is not null)
             {
+                // Send the received buffer (may be pooled)
                 await _udp!.SendAsync(
-                    responseBytes,
-                    responseBytes.Length,
+                    response.Buffer,
+                    response.Length,
                     result.RemoteEndPoint);
 
                 // Parse response for logging
-                var resp = DnsMessage.TryParse(responseBytes);
+                var resp = DnsMessage.TryParse(response.Buffer);
 
                 if (resp is not null)
                 {
@@ -152,6 +153,9 @@ public sealed class DnsServer : BackgroundService
                         Status: resp.ResponseCode.ToString(),
                         ResponseIp: resp.AnswerAddress));
                 }
+
+                // Return pooled buffer if applicable
+                response.Return();
             }
         }
         catch (Exception ex)

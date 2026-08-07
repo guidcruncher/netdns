@@ -4,7 +4,6 @@ namespace DnsForwarder.Dns.Core;
 
 public static class DnsParser
 {
-    // NOTE: This is a simplified parser; for production use a mature DNS library.
     public static DnsMessage Parse(byte[] buffer)
     {
         var msg = new DnsMessage();
@@ -21,6 +20,8 @@ public static class DnsParser
         offset += 2;
 
         msg.IsResponse = (flags & 0x8000) != 0;
+        // Response code (last 4 bits of flags)
+        msg.ResponseCode = ((flags & 0x000F)).ToString();
 
         ushort qdCount = BinaryPrimitives.ReadUInt16BigEndian(buffer.AsSpan(offset));
         offset += 2;
@@ -79,6 +80,10 @@ public static class DnsParser
             });
         }
 
+        // Ensure ResponseCode is set from header RCODE (last 4 bits)
+        ushort headerFlags = BinaryPrimitives.ReadUInt16BigEndian(buffer.AsSpan(2));
+        msg.ResponseCode = ((headerFlags & 0x000F)).ToString();
+
         return msg;
     }
 
@@ -134,8 +139,15 @@ public static class DnsParser
 
     public static byte[] BuildBlockedResponse(DnsMessage request)
     {
-        // Very simple NXDOMAIN response: copy header ID, set response + RCODE=3, no answers.
-        var buffer = new byte[12];
+        // Build NXDOMAIN response: copy header ID, set response + RCODE=3, echo question section.
+        // Calculate question section size
+        int qSize = 0;
+        foreach (var q in request.Questions)
+        {
+            qSize += GetNameWireLength(q.Name) + 4; // qname + qtype(2) + qclass(2)
+        }
+
+        var buffer = new byte[12 + qSize];
         int offset = 0;
 
         BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(offset), request.Id);
@@ -156,8 +168,50 @@ public static class DnsParser
         BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(offset), 0); // ARCOUNT
         offset += 2;
 
-        // For simplicity, we don't echo the question section here.
-        // A more complete implementation should copy the original question bytes.
+        // Write question section
+        foreach (var q in request.Questions)
+        {
+            offset += WriteNameWire(buffer, offset, q.Name);
+            BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(offset), (ushort)q.Type);
+            offset += 2;
+            BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(offset), (ushort)q.Class);
+            offset += 2;
+        }
+
         return buffer;
+    }
+
+    private static int GetNameWireLength(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return 1; // root
+
+        var parts = name.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        int len = 0;
+        foreach (var p in parts)
+            len += 1 + System.Text.Encoding.ASCII.GetByteCount(p);
+        len += 1; // null terminator
+        return len;
+    }
+
+    private static int WriteNameWire(byte[] buffer, int offset, string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            buffer[offset++] = 0;
+            return 1;
+        }
+
+        var parts = name.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var p in parts)
+        {
+            var bytes = System.Text.Encoding.ASCII.GetBytes(p);
+            buffer[offset++] = (byte)bytes.Length;
+            Array.Copy(bytes, 0, buffer, offset, bytes.Length);
+            offset += bytes.Length;
+        }
+
+        buffer[offset++] = 0; // terminator
+        return GetNameWireLength(name);
     }
 }

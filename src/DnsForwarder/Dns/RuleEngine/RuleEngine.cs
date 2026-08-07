@@ -5,6 +5,7 @@ using DnsForwarder.Dns.Core;
 using DnsForwarder.Dns.Filtering;
 
 using Microsoft.Extensions.Logging;
+using DnsForwarder.Utils;
 
 namespace DnsForwarder.Dns.RuleEngine;
 
@@ -283,7 +284,7 @@ public sealed class RuleEngine
             return HostOverride(hostIp);
         }
 
-        var allow = new List<UpstreamEntry>();
+        var allow = ListPool<UpstreamEntry>.Rent();
         UpstreamEntry? block = null;
 
         if (_exact.TryGetValue(lower, out var ex))
@@ -307,23 +308,29 @@ public sealed class RuleEngine
         if (allow.Count > 0)
         {
             _logger.LogDebug("Request {RequestId}: Allow rules matched for {Domain}", requestId, domain);
-            return new RuleResult(allow, false);
+            // Create a compact result list and return the rented list to the pool
+            var resultList = new List<UpstreamEntry>(allow);
+            ListPool<UpstreamEntry>.Return(allow);
+            return new RuleResult(resultList, false);
         }
 
         if (block != null)
         {
             _logger.LogInformation("Request {RequestId}: Blocking domain {Domain} due to rule {Rule}",
                 requestId, domain, block.Value.Name);
+            ListPool<UpstreamEntry>.Return(allow);
             return new RuleResult(new List<UpstreamEntry> { block.Value }, true);
         }
 
         if (_fallback.Count > 0)
         {
             _logger.LogDebug("Request {RequestId}: Using fallback resolver chain for {Domain}", requestId, domain);
+            ListPool<UpstreamEntry>.Return(allow);
             return new RuleResult(_fallback, false);
         }
 
         _logger.LogDebug("Request {RequestId}: Using default resolver for {Domain}", requestId, domain);
+        ListPool<UpstreamEntry>.Return(allow);
         return new RuleResult(
             new List<UpstreamEntry> { new("default", _defaultClient) },
             false);

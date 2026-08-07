@@ -3,8 +3,7 @@ using System.Net.NetworkInformation;
 
 using DnsForwarder.Dhcp;
 
-using FluentAssertions;
-
+using System.Linq;
 using Xunit;
 
 namespace DnsForwarder.Dhcp.Tests;
@@ -24,8 +23,8 @@ public class LeaseEngineTests
 
         var lease = await engine.AllocateWithArpCheck(Mac(1), TimeSpan.FromHours(1), arp);
 
-        lease.Ip.ToString().Should().Be("192.168.10.1");
-        store.GetActiveLeases().Should().ContainSingle();
+        Assert.Equal("192.168.10.1", lease.Ip.ToString());
+        Assert.Single(store.GetActiveLeases());
     }
 
     [Fact]
@@ -39,7 +38,7 @@ public class LeaseEngineTests
         var first = await engine.AllocateWithArpCheck(Mac(1), TimeSpan.FromHours(1), arp);
         var second = await engine.AllocateWithArpCheck(Mac(1), TimeSpan.FromHours(1), arp);
 
-        second.Ip.Should().Be(first.Ip);
+        Assert.Equal(first.Ip, second.Ip);
     }
 
     [Fact]
@@ -58,7 +57,7 @@ public class LeaseEngineTests
 
         engine.Release(Mac(1));
 
-        store.GetActiveLeases().Should().BeEmpty();
+        Assert.Empty(store.GetActiveLeases());
     }
 
     [Fact]
@@ -72,7 +71,7 @@ public class LeaseEngineTests
 
         engine.Decline(ip);
 
-        store.GetBadIps().Should().Contain(ip);
+        Assert.Contains(ip, store.GetBadIps());
     }
 
 }

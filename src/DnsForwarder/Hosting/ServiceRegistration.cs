@@ -23,10 +23,10 @@ public static class ServiceRegistration
 
         logger.LogInformation("Loading ServerOptions…");
 
-        var serverOptions = ctx.Configuration
-            .GetSection("Server").Get<ServerOptions>() ?? new ServerOptions();
+        var serverOptions = new ServerOptions();
+        ctx.Configuration.Bind(serverOptions);
+        services.AddSingleton<ServerOptions>(serverOptions);
 
-        services.AddSingleton(serverOptions);
 
         logger.LogInformation("Registering EventBus…");
         services.AddEventBus(ctx.Configuration);

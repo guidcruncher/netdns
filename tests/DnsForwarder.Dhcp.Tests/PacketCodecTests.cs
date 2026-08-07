@@ -49,6 +49,6 @@ public class PacketCodecTests
         var nak = DhcpPacketCodec.BuildNak(req, IPAddress.Parse("192.168.10.1"));
 
         var parsed = DhcpPacketCodec.Parse(nak);
-        parsed.GetMessageType().Should().Be(DhcpMessageType.Nak);
+        Assert.Equal(DhcpMessageType.Nak, parsed.GetMessageType());
     }
 }

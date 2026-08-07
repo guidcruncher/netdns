@@ -3,6 +3,7 @@ using DnsForwarder.Dhcp;
 using DnsForwarder.Dns;
 using DnsForwarder.Events;
 using DnsForwarder.Exporters;
+using DnsForwarder.Metrics;
 using DnsForwarder.Ntp;
 
 using Microsoft.Extensions.Configuration;
@@ -17,32 +18,43 @@ public static class EventsServiceCollection
         var server = config.Get<ServerOptions>() ?? new ServerOptions();
         var metrics = server.Metrics;
 
+        // Make MetricOptions injectable
         services.AddSingleton<MetricOptions>(metrics);
 
         // Shared EventBus
         services.AddSingleton<EventBus>();
 
-        // Metrics facades
+        // Metrics registry (required for Prometheus)
+        services.AddSingleton<MetricsRegistry>();
+
+        // Metrics facades (DNS/DHCP/NTP → registry)
         services.AddSingleton<IDhcpMetrics, DhcpMetrics>();
         services.AddSingleton<IDnsMetrics, DnsMetrics>();
         services.AddSingleton<INtpMetrics, NtpMetrics>();
 
+        // Exporters
         if (!metrics.Enabled)
         {
             services.AddHostedService<NullEventExporter>();
+            return services;
         }
-        else
+
+        switch (metrics.StorageEngine)
         {
-            // Exporters (background services)
-            switch (metrics.StorageEngine)
-            {
-                case "json":
-                    services.AddHostedService<JsonEventExporter>();
-                    break;
-                case "litedb":
-                    services.AddHostedService<LiteDbEventExporter>();
-                    break;
-            }
+            case "json":
+                services.AddHostedService<JsonEventExporter>();
+                break;
+
+            case "litedb":
+                services.AddHostedService<LiteDbEventExporter>();
+                break;
+
+            case "prometheus":
+                break;
+
+            default:
+                services.AddHostedService<NullEventExporter>();
+                break;
         }
 
         return services;

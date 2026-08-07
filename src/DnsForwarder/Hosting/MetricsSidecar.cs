@@ -23,7 +23,7 @@ public static class MetricsSidecar
         }
 
         logger.LogInformation(
-            "Starting Prometheus metrics sidecar on http://{Address}:{Port}/{Location}",
+            "Starting Prometheus metrics sidecar on http://{Address}:{Port}{Location}",
             serverOptions.Metrics.ListenAddress,
             serverOptions.Metrics.ListenPort,
             serverOptions.Metrics.Location);

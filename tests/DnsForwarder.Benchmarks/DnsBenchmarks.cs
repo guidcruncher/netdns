@@ -51,13 +51,26 @@ public class DnsBenchmarks
                     Block = true
                 }
             },
-            DefaultResolver = new UpstreamResolverOptions
+
+            // UPDATED: DefaultResolvers replaces DefaultResolver
+            DefaultResolvers =
             {
-                Name = "Cloudflare",
-                Address = "1.1.1.1",
-                Port = 53,
-                Block = false
+                new UpstreamResolverOptions
+                {
+                    Name = "Cloudflare",
+                    Address = "1.1.1.1",
+                    Port = 53,
+                    Block = false
+                },
+                new UpstreamResolverOptions
+                {
+                    Name = "Google",
+                    Address = "8.8.8.8",
+                    Port = 53,
+                    Block = false
+                }
             },
+
             Caching = new CachingOptions
             {
                 Enabled = true,

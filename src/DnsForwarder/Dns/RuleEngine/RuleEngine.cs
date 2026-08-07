@@ -3,9 +3,9 @@ using System.Text.RegularExpressions;
 
 using DnsForwarder.Dns.Core;
 using DnsForwarder.Dns.Filtering;
+using DnsForwarder.Utils;
 
 using Microsoft.Extensions.Logging;
-using DnsForwarder.Utils;
 
 namespace DnsForwarder.Dns.RuleEngine;
 
@@ -33,10 +33,31 @@ public sealed class RuleEngine
         _options = options;
         _logger = logger;
 
-        _defaultClient = new UdpDnsClient(
-            new IPEndPoint(IPAddress.Parse(options.DefaultResolver.Address),
-                           options.DefaultResolver.Port));
+        //
+        // Pick one default resolver at random
+        //
+        UpstreamResolverOptions selected;
 
+        if (options.DefaultResolvers != null && options.DefaultResolvers.Count > 0)
+        {
+            selected = options.DefaultResolvers[Random.Shared.Next(options.DefaultResolvers.Count)];
+        }
+        else
+        {
+            selected = new UpstreamResolverOptions
+            {
+                Address = "8.8.8.8",
+                Port = 53,
+                Name = "fallback-default"
+            };
+        }
+
+        _defaultClient = new UdpDnsClient(
+            new IPEndPoint(IPAddress.Parse(selected.Address), selected.Port));
+
+        //
+        // Load resolver rules
+        //
         if (options.Resolvers != null)
         {
             foreach (var r in options.Resolvers)
@@ -68,29 +89,23 @@ public sealed class RuleEngine
     {
         var resp = new List<byte>();
 
-        // Transaction ID
         resp.Add(req[0]);
         resp.Add(req[1]);
 
-        // Flags: QR=1, RD=1, RA=1, RCODE=rcode
         resp.Add(0x81);
         resp.Add((byte)(0x80 | (rcode & 0x0F)));
 
-        // QDCOUNT = 1
         resp.Add(0x00);
         resp.Add(0x01);
 
-        // ANCOUNT = 0
         resp.Add(0x00);
         resp.Add(0x00);
 
-        // NSCOUNT = 0, ARCOUNT = 0
         resp.Add(0x00);
         resp.Add(0x00);
         resp.Add(0x00);
         resp.Add(0x00);
 
-        // Copy question section
         resp.AddRange(req.Skip(12));
 
         return resp.ToArray();
@@ -103,35 +118,31 @@ public sealed class RuleEngine
         var response = new List<byte>
         {
             (byte)(id >> 8), (byte)(id & 0xFF),
-            0x81, 0x80, // QR=1, RD=1, RA=1, RCODE=0
-            0x00, 0x01, // QDCOUNT
-            0x00, 0x01, // ANCOUNT
-            0x00, 0x00, // NSCOUNT
-            0x00, 0x00  // ARCOUNT
+            0x81, 0x80,
+            0x00, 0x01,
+            0x00, 0x01,
+            0x00, 0x00,
+            0x00, 0x00
         };
 
-        // Copy question
         response.AddRange(req.Skip(12));
 
-        // Answer section
         response.Add(0xC0);
         response.Add(0x0C);
 
         var addrBytes = ip.GetAddressBytes();
 
         if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-            response.AddRange(new byte[] { 0x00, 0x01 }); // A
+            response.AddRange(new byte[] { 0x00, 0x01 });
         else
-            response.AddRange(new byte[] { 0x00, 0x1C }); // AAAA
+            response.AddRange(new byte[] { 0x00, 0x1C });
 
-        response.AddRange(new byte[] { 0x00, 0x01 }); // CLASS IN
+        response.AddRange(new byte[] { 0x00, 0x01 });
 
-        // TTL (big-endian)
         var ttlBytes = new byte[4];
         System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(ttlBytes, _options.BlockResponse.Ttl);
         response.AddRange(ttlBytes);
 
-        // RDLENGTH + RDATA
         response.Add(0x00);
         response.Add((byte)addrBytes.Length);
         response.AddRange(addrBytes);
@@ -177,7 +188,6 @@ public sealed class RuleEngine
         }
         else
         {
-            // Avoid RegexOptions.Compiled for many patterns — use interpreted regex to reduce JIT/native-code overhead
             _regex.Add(rule with
             {
                 Regex = new Regex(pattern, RegexOptions.IgnoreCase)
@@ -276,7 +286,6 @@ public sealed class RuleEngine
     {
         var lower = domain.ToLowerInvariant();
 
-        // Hosts: most-specific match (exact + wildcard)
         var hostIp = _hosts.MatchMostSpecific(lower);
         if (hostIp != null)
         {
@@ -308,7 +317,6 @@ public sealed class RuleEngine
         if (allow.Count > 0)
         {
             _logger.LogDebug("Request {RequestId}: Allow rules matched for {Domain}", requestId, domain);
-            // Create a compact result list and return the rented list to the pool
             var resultList = new List<UpstreamEntry>(allow);
             ListPool<UpstreamEntry>.Return(allow);
             return new RuleResult(resultList, false);

@@ -3,7 +3,7 @@ namespace DnsForwarder.Dns;
 public sealed class DnsForwarderOptions
 {
     public ListenOptions Listen { get; set; } = new();
-    public UpstreamResolverOptions DefaultResolver { get; set; } = new();
+    public List<UpstreamResolverOptions> DefaultResolvers { get; set; } = new();
     public List<UpstreamResolverOptions> Resolvers { get; set; } = new();
     public CachingOptions Caching { get; set; } = new();
 

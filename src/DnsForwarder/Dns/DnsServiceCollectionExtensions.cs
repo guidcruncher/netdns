@@ -29,8 +29,15 @@ public static class DnsServiceCollectionExtensions
         if (config["ResolverOverride"] is string resolver)
         {
             var parts = resolver.Split(':');
-            options.DefaultResolver.Address = parts[0];
-            options.DefaultResolver.Port = parts.Length > 1 ? int.Parse(parts[1]) : 53;
+
+            // Replace old single DefaultResolver with a list
+            options.DefaultResolvers.Clear();
+            options.DefaultResolvers.Add(new UpstreamResolverOptions
+            {
+                Address = parts[0],
+                Port = parts.Length > 1 ? int.Parse(parts[1]) : 53,
+                Name = "override"
+            });
         }
 
         //
@@ -46,9 +53,26 @@ public static class DnsServiceCollectionExtensions
         services.AddSingleton<IDnsClient>(sp =>
         {
             var opt = sp.GetRequiredService<DnsForwarderOptions>();
+
+            // Fallback if no default resolvers configured
+            var resolvers = opt.DefaultResolvers.Count > 0
+                ? opt.DefaultResolvers
+                : new List<UpstreamResolverOptions>
+                {
+                    new UpstreamResolverOptions
+                    {
+                        Address = "8.8.8.8",
+                        Port = 53,
+                        Name = "fallback-default"
+                    }
+                };
+
+            // Pick one at random
+            var selected = resolvers[Random.Shared.Next(resolvers.Count)];
+
             var endpoint = new IPEndPoint(
-                IPAddress.Parse(opt.DefaultResolver.Address),
-                opt.DefaultResolver.Port);
+                IPAddress.Parse(selected.Address),
+                selected.Port);
 
             IDnsClient client = new UdpDnsClient(endpoint);
 
@@ -73,4 +97,3 @@ public static class DnsServiceCollectionExtensions
         return services;
     }
 }
-

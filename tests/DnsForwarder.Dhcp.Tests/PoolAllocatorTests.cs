@@ -1,8 +1,8 @@
+using System.Linq;
 using System.Net;
 
 using DnsForwarder.Dhcp;
 
-using System.Linq;
 using Xunit;
 
 

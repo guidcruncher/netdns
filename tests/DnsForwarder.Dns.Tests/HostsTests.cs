@@ -18,13 +18,17 @@ public class HostsTests
     {
         var opts = new DnsForwarderOptions
         {
-            DefaultResolver = new UpstreamResolverOptions
+            // UPDATED: DefaultResolvers replaces DefaultResolver
+            DefaultResolvers =
             {
-                Name = "default",
-                Address = "1.1.1.1",
-                Port = 53,
-                Rule = null,
-                Block = false
+                new UpstreamResolverOptions
+                {
+                    Name = "default",
+                    Address = "1.1.1.1",
+                    Port = 53,
+                    Rule = null,
+                    Block = false
+                }
             },
 
             Resolvers = new List<UpstreamResolverOptions>()
@@ -165,6 +169,4 @@ public class HostsTests
 
         Assert.Equal(IPAddress.Parse("10.0.0.10"), ip);
     }
-
-
 }

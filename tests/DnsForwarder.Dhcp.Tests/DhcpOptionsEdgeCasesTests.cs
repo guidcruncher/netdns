@@ -1,6 +1,8 @@
 using System.Linq;
 using System.Net;
+
 using DnsForwarder.Dhcp;
+
 using Xunit;
 
 namespace DnsForwarder.Dhcp.Tests

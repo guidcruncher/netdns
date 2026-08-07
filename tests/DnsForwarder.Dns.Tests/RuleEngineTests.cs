@@ -13,12 +13,16 @@ public sealed class RuleEngineTests
     {
         var options = new DnsForwarderOptions
         {
-            DefaultResolver = new UpstreamResolverOptions
+            // UPDATED: DefaultResolvers replaces DefaultResolver
+            DefaultResolvers =
             {
-                Address = "127.0.0.1",
-                Port = 5300,
-                Rule = "*.test",
-                Name = "default"
+                new UpstreamResolverOptions
+                {
+                    Address = "127.0.0.1",
+                    Port = 5300,
+                    Rule = "*.test",
+                    Name = "default"
+                }
             }
         };
 

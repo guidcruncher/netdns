@@ -1,8 +1,6 @@
+using System;
+using System.Buffers;
 using System.Collections.Concurrent;
-using System.Net;
-using System.Text.RegularExpressions;
-
-using DnsForwarder.Dns.Filtering;
 
 namespace DnsForwarder.Dns.RuleEngine;
 
@@ -18,11 +16,18 @@ public sealed class DnsCache
         {
             if (DateTime.UtcNow < entry.Expires)
             {
-                response = entry.Response;
+                // Copy only the used length to avoid exposing pooled buffer and keep callers independent
+                var copy = new byte[entry.Length];
+                Buffer.BlockCopy(entry.Buffer, 0, copy, 0, entry.Length);
+                response = copy;
                 return true;
             }
 
-            _entries.TryRemove(domain, out _);
+            // Entry expired — remove and return pooled buffer
+            if (_entries.TryRemove(domain, out var removed))
+            {
+                ArrayPool<byte>.Shared.Return(removed.Buffer, clearArray: true);
+            }
         }
 
         return false;
@@ -31,8 +36,33 @@ public sealed class DnsCache
     public void Store(string domain, byte[] response, TimeSpan ttl)
     {
         var expires = DateTime.UtcNow + ttl;
-        _entries[domain] = new CacheEntry(response, expires);
+        var pool = ArrayPool<byte>.Shared;
+        var buf = pool.Rent(response.Length);
+        Buffer.BlockCopy(response, 0, buf, 0, response.Length);
+
+        var newEntry = new CacheEntry(buf, response.Length, expires);
+
+        _entries.AddOrUpdate(domain,
+            newEntry,
+            (key, existing) =>
+            {
+                // Return previous buffer to pool before replacing
+                ArrayPool<byte>.Shared.Return(existing.Buffer, clearArray: true);
+                return newEntry;
+            });
     }
 
-    private sealed record CacheEntry(byte[] Response, DateTime Expires);
+    private sealed class CacheEntry
+    {
+        public byte[] Buffer { get; }
+        public int Length { get; }
+        public DateTime Expires { get; }
+
+        public CacheEntry(byte[] buffer, int length, DateTime expires)
+        {
+            Buffer = buffer;
+            Length = length;
+            Expires = expires;
+        }
+    }
 }

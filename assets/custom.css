@@ -1,0 +1,28 @@
+/* Minimal custom styles for the mkdocs-material site */
+:root {
+  /* fallback colors if you want to override */
+  --md-primary-fg: #264653;
+  --md-accent-fg: #2a9d8f;
+}
+
+/* Slightly larger logo spacing in header */
+.md-header__inner .md-logo {
+  padding-left: 8px;
+}
+
+/* Make the site header a bit darker for contrast */
+.md-header {
+  background-color: #1f3140; /* subtle dark header */
+}
+
+/* Tweak the sidebar nav active color */
+.md-nav__link--active {
+  background-color: rgba(42,157,143,0.08);
+  border-left-color: #2a9d8f;
+}
+
+/* Footer small note */
+.md-footer {
+  font-size: 0.95rem;
+  color: #666;
+}

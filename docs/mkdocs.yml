@@ -1,0 +1,36 @@
+site_name: DnsForwarder Documentation
+site_description: Documentation for the DnsForwarder project (usage, technical details, configuration, and diagrams).
+site_url: https://guidcruncher.github.io/netdns
+repo_name: guidcruncher/netdns
+repo_url: https://github.com/guidcruncher/netdns
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+
+plugins:
+  - search
+  - mermaid2
+
+nav:
+  - Home: README.md
+  - Usage: usage.md
+  - Technical: technical.md
+  - Examples: examples.md
+  - Configuration examples: configurations.md
+  - Docker Compose: docker-compose.yml
+  - Prometheus config: prometheus.yml
+  - Diagrams:
+    - Diagrams index: diagrams/README.md
+    - Component diagram: diagrams/component.svg
+    - DNS sequence: diagrams/dns-sequence.svg
+    - DHCP sequence: diagrams/dhcp-sequence.svg
+    - NTP sequence: diagrams/ntp-sequence.svg
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true

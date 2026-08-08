@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="240" viewBox="0 0 700 240">
+  <style>
+    .actor { fill:#f8f9fa; stroke:#222; stroke-width:1.2; rx:6; }
+    .text { font: 13px/1.2 sans-serif; fill:#111; }
+    .arrow { stroke:#222; stroke-width:1.4; fill:none; marker-end:url(#a); }
+  </style>
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#222" />
+    </marker>
+  </defs>
+
+  <rect x="30" y="30" width="170" height="50" class="actor"/>
+  <text x="115" y="60" text-anchor="middle" class="text">Client</text>
+
+  <rect x="260" y="20" width="260" height="80" class="actor"/>
+  <text x="390" y="50" text-anchor="middle" class="text" font-weight="bold">DnsForwarder (NTP)</text>
+
+  <path d="M200 55 L260 55" class="arrow" />
+  <text x="230" y="43" class="text">NTP request (UDP/123)</text>
+
+  <path d="M520 55 L460 55" class="arrow" />
+  <text x="490" y="43" class="text">Build NTP response</text>
+
+  <path d="M260 100 L200 100" class="arrow" />
+  <text x="230" y="88" class="text">NTP response</text>
+
+  <text x="20" y="220" class="text">Static SVG: NTP request/response simplified</text>
+</svg>

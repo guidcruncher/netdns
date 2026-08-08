@@ -18,6 +18,10 @@ tracking.example.com
 - From repo root:
   - dotnet run --project src/DnsForwarder/DnsForwarder.csproj -- --config src/DnsForwarder/appsettings.Development.json
 
+## Example: Start using docker-compose
+- From repo root:
+  - docker-compose -f docs/docker-compose.yml up --build
+
 ## Example: Query & verify NXDOMAIN blocked response
 - After configuring a rule that blocks `ads.example.com`:
   - dig @127.0.0.1 -p 1053 ads.example.com

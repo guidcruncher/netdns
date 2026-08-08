@@ -7,3 +7,5 @@ Contents
 - usage.md — examples for running and configuring the service
 - technical.md — architecture, component descriptions, threading and caching behaviour
 - examples.md — ready-to-run configuration and CLI examples
+- docker-compose.yml — example docker-compose to run DnsForwarder and supporting services
+- diagrams.md — architecture and flow diagrams (mermaid)

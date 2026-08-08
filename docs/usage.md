@@ -4,11 +4,14 @@
 1. Build and run:
    - dotnet run --project src/DnsForwarder/DnsForwarder.csproj -- --config src/DnsForwarder/appsettings.Development.json
 
-2. Run in Docker:
+2. Run in Docker (single container):
    - docker build -t dnsforwarder .
-   - docker run -p 53:53/udp -p 1080:1080 dnsforwarder
+   - docker run -p 53:53/udp -p 1080:1080 dnsforwarder -- --config /app/appsettings.Docker.json
 
-3. Use dig to test:
+3. Run with docker-compose (recommended for multi-protocol exposure):
+   - docker-compose -f docs/docker-compose.yml up --build
+
+4. Use dig to test:
    - dig @127.0.0.1 -p 1053 example.com
 
 ## Configuration (appsettings.json)
@@ -43,6 +46,12 @@ Example snippet:
 ## Blocklist sources
 - Local file list: implement FileBlocklistSource with paths in configuration.
 - URL lists: UrlBlocklistSource caches remote blocklists under `blocklist-cache/`.
+
+## Exposed ports in the Docker Compose example
+- DNS (UDP) — 53
+- DHCP (UDP) — 67 (server), 68 (client) — only relevant if DHCP mode is enabled
+- NTP (UDP) — 123
+- Metrics (HTTP) — 1080
 
 ## Metrics & Logging
 - Prometheus-style metrics are exposed at: `http://127.0.0.1:1080/metrics` (example).

@@ -29,6 +29,7 @@ nav:
   - Configuration examples: configurations.md
   - Docker Compose: docker-compose.yml
   - Prometheus config: prometheus.yml
+  - Architecture: architecture.md
   - Diagrams:
     - Diagrams index: diagrams/README.md
     - Component diagram: diagrams/component.svg

@@ -9,13 +9,20 @@ site_dir: site
 
 theme:
   name: material
+  logo: docs/assets/logo.svg
+  favicon: docs/assets/favicon.svg
+  palette:
+    primary: 'indigo'
+    accent: 'teal'
+  features:
+    - navigation.instant
 
 plugins:
   - search
   - mermaid2
 
 nav:
-  - Home: README.md
+  - Home: index.md
   - Usage: usage.md
   - Technical: technical.md
   - Examples: examples.md
@@ -34,3 +41,6 @@ markdown_extensions:
   - codehilite
   - toc:
       permalink: true
+
+extra_css:
+  - docs/assets/custom.css

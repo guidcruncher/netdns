@@ -18,6 +18,8 @@ DnsForwarder is a lightweight, high-performance DNS forwarder written in .NET. T
 - [Docker Compose example: docker-compose.yml](docker-compose.yml)
 - [Prometheus Configuration example](docs/prometheus.md)
 
+Documentation can be found here [https://guidcruncher.github.io/netdns/](https://guidcruncher.github.io/netdns/)
+
 ---
 
 License: MIT

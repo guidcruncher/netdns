@@ -19,7 +19,7 @@ mkdocs-install:
 	pip install mkdocs-mermaid2-plugin --break-system-packages
 
 docs:
-	mkdocs serve --dev-addr 0.0.0.0:8000 --config-file ./mkdocs.yml
+	mkdocs serve --dev-addr 0.0.0.0:8000 --config-file ./mkdocs.yml --watch ./docs
 
 metrics:
 	curl http://127.0.0.1:1080/metrics  -v

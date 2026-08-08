@@ -18,4 +18,3 @@ Quick links
 - Configuration examples: configurations.md
 - Docker Compose example: docker-compose.yml
 
-If you'd like a published docs site (MkDocs or similar) or a PR opened against `dev`, tell me and I will prepare it.

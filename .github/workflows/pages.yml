@@ -1,10 +1,10 @@
-name: Deploy Docs Site
+name: Build & Deploy Docs to GitHub Pages
 
 on:
+  pull_request:
+    branches: [ main ]
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: [ main ]
 
 permissions:
   contents: read
@@ -12,30 +12,41 @@ permissions:
   id-token: write
 
 jobs:
-  build:
+  validate:
+    name: Validate docs on PR
     runs-on: ubuntu-latest
-
+    if: github.event_name == 'pull_request'
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload docs artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs
+      # Optional: ensure markdown builds cleanly
+      - name: Check Markdown formatting
+        run: |
+          echo "Add markdown linting or link checking here if desired"
 
   deploy:
-    needs: build
+    name: Deploy to GitHub Pages
     runs-on: ubuntu-latest
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
+      - uses: actions/checkout@v4
+
+      # Build GitHub Pages site from docs/
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build site
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+          destination: ./_site
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./_site
+
       - name: Deploy to GitHub Pages
-        id: deployment
         uses: actions/deploy-pages@v4

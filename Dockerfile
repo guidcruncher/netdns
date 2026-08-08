@@ -19,5 +19,5 @@ COPY --from=build /out .
 EXPOSE 53/udp
 
 # Run DNS forwarder
+RUN mkdir -p /var/lib/dnsforwarder
 ENTRYPOINT ["dotnet", "DnsForwarder.dll"]
-

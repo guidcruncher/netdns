@@ -21,6 +21,13 @@ plugins:
   - search
   - mermaid2
 
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
 nav:
   - Home: index.md
   - Usage: usage.md
@@ -36,6 +43,7 @@ nav:
     - DNS sequence: diagrams/dns-sequence.svg
     - DHCP sequence: diagrams/dhcp-sequence.svg
     - NTP sequence: diagrams/ntp-sequence.svg
+  - Public DNS: public-dns.json
 
 markdown_extensions:
   - admonition

@@ -64,7 +64,34 @@ publish:
 	dotnet publish $(PROJECT) -c Release -r $(RUNTIME) --self-contained false -o publish/
 
 docker-build:
-	docker build -t dns-forwarder .
+	docker buildx build \
+		--file ./Dockerfile \
+		--tag docker.io/$(IMAGE_NAME):latest \
+		--progress=plain
+		.
 
 docker-run:
-	docker run --rm -p 53:53/udp dns-forwarder
+	docker compose -f ./docker-compose.yml down
+	docker compose -f ./docker-compose.yml rm -f
+	docker compose -f ./docker-compose.yml build --no-cache
+	docker compose -f ./docker-compose.yml up -d
+	docker compose -f ./docker-compose.yml logs -f
+
+docker-run-dev:
+	docker compose -f ./docker-compose-dev.yml down
+	docker compose -f ./docker-compose-dev.yml rm -f
+	docker compose -f ./docker-compose-dev.yml build --no-cache
+	docker compose -f ./docker-compose-dev.yml up -d
+	docker compose -f ./docker-compose-dev.yml logs -f
+
+docker-stop:
+	docker compose -f ./docker-compose.yml stop
+	docker compose -f ./docker-compose.yml rm -f
+
+docker-publish: ## Build the Docker image
+	docker buildx build \
+		--file ./Dockerfile \
+		--tag docker.io/guidcruncher/dns-forwarder:latest \
+		--progress=plain \
+		--push \
+		.

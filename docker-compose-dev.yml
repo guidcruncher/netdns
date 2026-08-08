@@ -9,14 +9,14 @@ services:
 
     # DNS uses UDP port 53
     ports:
-      - "53:53/tcp"
-      - "53:53/udp"
-      - "67:67/udp"
-      - "123:123/udp"
+      - "1053:1053/tcp"
+      - "1053:1053/udp"
+      - "1067:1067/udp"
+      - "1123:1123/udp"
 
     # Mount config so you can edit without rebuilding
     volumes:
-      - ./src/DnsForwarder/appsettings.Docker.json:/app/appsettings.json:ro
+      - ./src/DnsForwarder/appsettings.Development.json:/app/appsettings.json:ro
 
     cap_add:
       - NET_ADMIN

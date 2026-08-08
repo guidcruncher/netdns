@@ -15,11 +15,18 @@ Comprehensive example for local/dev running.
       "Address": "127.0.0.1",
       "Port": 1053
     },
-    "DefaultResolvers": [{
-      "Name": "Cloudflare",
-      "Address": "1.1.1.1",
-      "Port": 53
-    }],
+    "DefaultResolvers": [
+      {
+        "Name": "Cloudflare",
+        "Address": "1.1.1.1",
+        "Port": 53
+      },
+      {
+        "Name": "Cloudflare Secondary",
+        "Address": "1.0.0.1",
+        "Port": 53
+      }
+    ],
     "Resolvers": [
       {
         "Name": "LocalDNS",
@@ -104,11 +111,18 @@ Example tuned for running inside Docker (paths reference `/app/blocklists` for m
       "Address": "0.0.0.0",
       "Port": 53
     },
-    "DefaultResolvers": [{
-      "Name": "Cloudflare",
-      "Address": "1.1.1.1",
-      "Port": 53
-    }],
+    "DefaultResolvers": [
+      {
+        "Name": "Cloudflare",
+        "Address": "1.1.1.1",
+        "Port": 53
+      },
+      {
+        "Name": "Cloudflare Secondary",
+        "Address": "1.0.0.1",
+        "Port": 53
+      }
+    ],
     "Resolvers": [
       {
         "Name": "DockerInternal",

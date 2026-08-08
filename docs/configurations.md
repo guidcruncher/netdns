@@ -1,32 +1,187 @@
 # Configuration examples
 
-This folder contains full example configuration files you can use as a starting point when running DnsForwarder.
+Here are full example configuration files you can use as a starting point when running DnsForwarder.
 
-Files
-- `docs/configs/appsettings.example.json` — comprehensive example for local/dev running. Use this to learn the available settings and their structure.
-- `docs/configs/appsettings.Docker.json` — example tuned for running inside Docker (paths reference `/app/blocklists` for mounted blocklists and uses an alternate DNS port 1053 to avoid requiring root on the host).
+They are available in the project root.
 
-How to use
-1. Copy the example you want to use to the expected config location or mount it into the container:
-   - Local run: `cp docs/configs/appsettings.example.json src/DnsForwarder/appsettings.Development.json`
-   - Docker run: mount `docs/configs/appsettings.Docker.json` to `/app/appsettings.Docker.json` (the provided docker-compose does this by default).
+## Example
 
-2. Adjust the `BlocklistSources.Files` or `BlocklistSources.Urls` entries to point to your blocklist files/URLs.
+Comprehensive example for local/dev running.
 
-3. If you enable DHCP or NTP in `Service`, be aware these features are experimental. DHCP requires listening on UDP port 67 and may conflict with existing DHCP servers on your network — run in an isolated lab environment.
+```json
+{
+  "Dns": {
+    "Listen": {
+      "Address": "127.0.0.1",
+      "Port": 1053
+    },
+    "DefaultResolvers": [{
+      "Name": "Cloudflare",
+      "Address": "1.1.1.1",
+      "Port": 53
+    }],
+    "Resolvers": [
+      {
+        "Name": "LocalDNS",
+        "Address": "127.0.0.1",
+        "Port": 5353,
+        "Rule": "^localdev\\.",
+        "Block": false
+      },
+      {
+        "Name": "BlockDevAds",
+        "Rule": "^(ads|tracking)\\.",
+        "Block": true
+      }
+    ],
+    "HostsFiles": [],
+    "Caching": {
+      "Enabled": true,
+      "TtlSeconds": 300,
+      "MaxEntries": 2000
+    },
+    "BlockResponse": {
+      "Mode": "NXDOMAIN",
+      "StaticIp": "0.0.0.0",
+      "Ttl": 60
+    }
+  },
+  "Dhcp": {
+    "Enabled": false,
+    "ListenAddress": "127.0.0.1",
+    "ListenPort": 1067,
+    "LeaseStorePath": "leases.json",
+    "PoolCidr": "192.168.10.0/24",
 
-Notes on important fields
-- Service.DnsPort / AlternateDnsPort: The UDP port the service will bind to for DNS requests. On Linux/macOS binding to 53 typically requires root privileges.
-- Resolvers / DefaultResolvers: Upstream resolver definitions. `Rule` is optional and may be a regex or wildcard-treated rule depending on your configuration.
-- Caching: Controls in-memory DNS caching. `TryGetPooled` and `TryGet` semantics mean the cache uses pooled buffers; do not rely on the buffers outside the service boundaries.
-- BlocklistSources.Files: Array of paths pointing to blocklist files. When running in Docker, mount a host directory to `/app/blocklists` and reference `/app/blocklists/<file>` here.
-- Metrics: Port and path where the service exposes Prometheus metrics.
+    "ServerIdentifier": "192.168.10.1",
+    "Router": "192.168.10.1",
+    "DnsServer": "1.1.1.1",
+    "NtpServer": "",
 
-Example (quick start)
-- Run with docker-compose from repository root (the compose mounts `docs/configs/appsettings.Docker.json`):
+    "LeaseHours": 1,
 
-  docker-compose -f docs/docker-compose.yml up --build
+    "ArpTimeoutMs": 500,
 
-- Verify metrics are exposed at `http://localhost:1080/metrics` and that Prometheus (if enabled in compose) discovers the `dnsforwarder` target.
+    "BadIpStorePath": "badips.json"
+  },
+  "Ntp": {
+    "Enabled": true,
+    "ListenAddress": "127.0.0.1",
+    "Port": 1123,
+    "BufferSize": 65536,
+    "Stratum": 1,
+    "ReferenceId": "LOCL",
+    "Upstream": {
+      "Enabled": true,
+      "Servers": [
+        "0.pool.ntp.org",
+        "1.pool.ntp.org"
+      ],
+      "PollIntervalSeconds": 16
+    }
+  },
+  "Metrics": {
+    "Enabled": true,
+    "StorageEngine": "prometheus",
+    "Location": "/metrics",
+    "ListenAddress": "127.0.0.1",
+    "ListenPort": 1080
+  },
+  "Logging": {
+    "Level": "Debug"
+  }
+}
+```
 
-If you want me to add more configuration variants (Kubernetes ConfigMap examples, systemd service file snippets, or different sample blocklist formats), tell me which and I will add them to the branch.
+## Docker
+
+Example tuned for running inside Docker (paths reference `/app/blocklists` for mounted blocklists and uses an alternate DNS port 1053 to avoid requiring root on the host).
+
+```json
+{
+  "Dns": {
+    "Listen": {
+      "Address": "0.0.0.0",
+      "Port": 53
+    },
+    "DefaultResolvers": [{
+      "Name": "Cloudflare",
+      "Address": "1.1.1.1",
+      "Port": 53
+    }],
+    "Resolvers": [
+      {
+        "Name": "DockerInternal",
+        "Address": "127.0.0.11",
+        "Port": 53,
+        "Rule": "^docker\\.",
+        "Block": false
+      },
+      {
+        "Name": "BlockAds",
+        "Rule": "^(ads|tracking|metrics)\\.",
+        "Block": true
+      }
+    ],
+    "HostsFiles": [],
+    "Caching": {
+      "Enabled": true,
+      "TtlSeconds": 300,
+      "MaxEntries": 10000
+    },
+    "BlockResponse": {
+      "Mode": "NXDOMAIN",
+      "StaticIp": "0.0.0.0",
+      "Ttl": 60
+    }
+  },
+  "Dhcp": {
+    "Enabled": true,
+    "ListenAddress": "0.0.0.0",
+    "ListenPort": 67,
+    "LeaseStorePath": "/var/lib/dnsforwarder/leases.json",
+    "PoolCidr": "192.168.10.0/24",
+
+    "ServerIdentifier": "192.168.10.1",
+    "Router": "192.168.10.1",
+    "DnsServer": "1.1.1.1",
+    "NtpServer": "",
+
+    "LeaseHours": 1,
+
+    "ArpTimeoutMs": 500,
+
+    "BadIpStorePath": "/var/lib/dnsforwarder/badips.json"
+  }, 
+  "Ntp": {
+    "Enabled": true,
+    "ListenAddress": "0.0.0.0",
+    "Port": 123,
+    "BufferSize": 65536,
+    "Stratum": 1,
+    "ReferenceId": "LOCL",
+    "Upstream": {
+      "Enabled": true,
+      "Servers": [
+        "0.pool.ntp.org",
+        "1.pool.ntp.org"
+      ],
+      "PollIntervalSeconds": 16
+    }
+  },
+  "Metrics": {
+    "Enabled": true,
+    "StorageEngine": "prometheus",
+    "Location": "/metrics",
+    "ListenAddress": "127.0.0.1",
+    "ListenPort": 1080
+  },
+  "Logging": {
+    "Level": "Warning"
+  }
+}
+```
+
+### Prometheus
+
+Metrics are exposed at `http://localhost:1080/metrics` and that Prometheus (if enabled in compose) discovers the `dnsforwarder` target.

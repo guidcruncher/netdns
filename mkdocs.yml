@@ -47,7 +47,7 @@ nav:
       - NTP sequence: diagrams/ntp-sequence.svg
   - Public DNS: public-dns.json
   - Docker Compose: docker-compose.md
-  - Prometheus config: prometheus.nd
+  - Prometheus config: prometheus.md
 
 extra_css:
   - assets/custom.css

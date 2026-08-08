@@ -14,22 +14,47 @@ tracking.example.com
 }
 ```
 
-## Example: Start the service (development)
-- From repo root:
-  - dotnet run --project src/DnsForwarder/DnsForwarder.csproj -- --config src/DnsForwarder/appsettings.Development.json
 
-## Example: Start using docker-compose
-- From repo root:
-  - docker-compose -f docs/docker-compose.yml up --build
+## Example: Run in Development
+
+From repo root:
+
+```bash
+make dev
+```
+
+## Example: Run Unit Tests
+
+From repo root:
+
+```bash
+make test
+```
 
 ## Example: Query & verify NXDOMAIN blocked response
-- After configuring a rule that blocks `ads.example.com`:
-  - dig @127.0.0.1 -p 1053 ads.example.com
-  - The response will have RCODE=3 (NXDOMAIN). Unit tests include a BuildBlockedResponse test.
+
+After configuring a rule that blocks `ads.example.com`:
+
+```bash
+dig @127.0.0.1 -p 1053 ads.example.com
+```
+
+The response will have RCODE=3 (NXDOMAIN). Unit tests include a BuildBlockedResponse test.
 
 ## Example: Benchmark run
-- dotnet run -c Release --project tests/DnsForwarder.Benchmarks/DnsForwarder.Benchmarks.csproj
 
-## Troubleshooting tips
-- If caching appears inconsistent, verify system time and TTL configuration.
-- For blocklist download failures, UrlBlocklistSource will return cached copy if available.
+```bash
+make benchmark
+```
+
+## Example: Query DNS return valid response
+
+```bash
+make dig
+```
+
+## Example: View metrics
+
+```bash
+make metrics
+```

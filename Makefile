@@ -77,12 +77,12 @@ docker-run:
 	docker compose -f ./docker-compose.yml up -d
 	docker compose -f ./docker-compose.yml logs -f
 
-docker-run:
-        docker compose -f ./docker-compose-dev.yml down
-        docker compose -f ./docker-compose-dev.yml rm -f
-        docker compose -f ./docker-compose-dev.yml build --no-cache
-        docker compose -f ./docker-compose-dev.yml up -d
-        docker compose -f ./docker-compose-dev.yml logs -f
+docker-run-dev:
+	docker compose -f ./docker-compose-dev.yml down
+	docker compose -f ./docker-compose-dev.yml rm -f
+	docker compose -f ./docker-compose-dev.yml build --no-cache
+	docker compose -f ./docker-compose-dev.yml up -d
+	docker compose -f ./docker-compose-dev.yml logs -f
 
 docker-stop:
 	docker compose -f ./docker-compose.yml stop

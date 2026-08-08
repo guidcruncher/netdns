@@ -10,6 +10,8 @@ services:
     # DNS uses UDP port 53
     ports:
       - "53:53/udp"
+      - "67:67/udp"
+      - "123:123/udp"
 
     # Mount config so you can edit without rebuilding
     volumes:

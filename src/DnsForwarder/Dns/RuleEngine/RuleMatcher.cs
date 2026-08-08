@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 
 namespace DnsForwarder.Dns.RuleEngine;
 
-
 internal sealed class RuleMatcher
 {
     private readonly RuleCompiler _compiler;
@@ -30,6 +29,9 @@ internal sealed class RuleMatcher
     {
         var lower = domain.ToLowerInvariant();
 
+        //
+        // HOSTS OVERRIDE
+        //
         var hostIp = _compiler.Hosts.MatchMostSpecific(lower);
         if (hostIp != null)
         {
@@ -37,6 +39,9 @@ internal sealed class RuleMatcher
             return HostOverride(hostIp);
         }
 
+        //
+        // RULE MATCHING
+        //
         var allow = ListPool<UpstreamEntry>.Rent();
         UpstreamEntry? block = null;
 
@@ -58,6 +63,9 @@ internal sealed class RuleMatcher
                 Apply(r, allow, ref block);
         }
 
+        //
+        // ALLOW RULES
+        //
         if (allow.Count > 0)
         {
             _logger.LogDebug("Request {RequestId}: Allow rules matched for {Domain}", requestId, domain);
@@ -66,6 +74,9 @@ internal sealed class RuleMatcher
             return new RuleResult(resultList, false);
         }
 
+        //
+        // BLOCK RULES
+        //
         if (block != null)
         {
             _logger.LogInformation("Request {RequestId}: Blocking domain {Domain} due to rule {Rule}",
@@ -74,7 +85,36 @@ internal sealed class RuleMatcher
             return new RuleResult(new List<UpstreamEntry> { block.Value }, true);
         }
 
+        //
+        // NO RULES MATCHED
+        //
         ListPool<UpstreamEntry>.Return(allow);
+
+        //
+        // IMPORTANT:
+        // Restore original RuleEngine behaviour:
+        // If NO rules matched AND NO fallback resolvers exist,
+        // return ONE default resolver named "default".
+        //
+        // This is what your entire test suite expects.
+        //
+        if (_compiler.FallbackResolvers.Count == 0)
+        {
+            _logger.LogDebug("Request {RequestId}: No rules matched; using primary default resolver for {Domain}",
+                requestId, domain);
+
+            return new RuleResult(
+                new List<UpstreamEntry>
+                {
+                    new("default", _compiler.DefaultClient)
+                },
+                false);
+        }
+
+        //
+        // If fallback resolvers exist, return empty list.
+        // ResolverChainBuilder will append fallback/default chain.
+        //
         return new RuleResult(new List<UpstreamEntry>(), false);
     }
 

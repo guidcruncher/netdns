@@ -9,6 +9,7 @@ services:
 
     # DNS uses UDP port 53
     ports:
+      - "53:53/tcp"
       - "53:53/udp"
       - "67:67/udp"
       - "123:123/udp"
@@ -16,6 +17,11 @@ services:
     # Mount config so you can edit without rebuilding
     volumes:
       - ./src/DnsForwarder/appsettings.Docker.json:/app/appsettings.json:ro
+
+    cap_add:
+      - NET_ADMIN
+      - SYS_TIME
+      - SYS_NICE
 
     # Optional: run with host networking for maximum performance
     # network_mode: host

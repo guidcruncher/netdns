@@ -6,12 +6,20 @@ TESTSNTP = tests/DnsForwarder.Ntp.Tests/DnsForwarder.Ntp.Tests.csproj
 BUILD_DIR = bin/
 RUNTIME = linux-x64
 
-.PHONY: all build clean run test restore publish metrics dev benchmark format dig
+.PHONY: all build clean run test restore publish metrics dev benchmark format dig docs mkdocs-install
 
 all: restore build
 
 dig:
 	dig itv.com @127.0.0.1 -p 1053
+
+mkdocs-install:
+	pip install mkdocs --break-system-packages
+	pip install mkdocs-material --break-system-packages
+	pip install mkdocs-mermaid2-plugin --break-system-packages
+
+docs:
+	mkdocs serve --dev-addr 0.0.0.0:8000 --config-file ./mkdocs.yml --watch ./docs
 
 metrics:
 	curl http://127.0.0.1:1080/metrics  -v

@@ -2,18 +2,18 @@ using System.Collections.Generic;
 
 namespace DnsForwarder.Dns.RuleEngine;
 
-internal sealed class AhoCorasickMatcher
+internal sealed class AhoCorasickMatcher<T>
 {
     private sealed class Node
     {
         public Dictionary<char, Node> Next { get; } = new();
         public Node? Fail { get; set; }
-        public List<CompiledRule> Output { get; } = new();
+        public List<T> Output { get; } = new();
     }
 
     private readonly Node _root = new();
 
-    public void Add(string pattern, CompiledRule rule)
+    public void Add(string pattern, T rule)
     {
         var core = pattern.Trim('*');
         if (string.IsNullOrWhiteSpace(core))
@@ -66,7 +66,7 @@ internal sealed class AhoCorasickMatcher
         }
     }
 
-    public IEnumerable<CompiledRule> Match(string text)
+    public IEnumerable<T> Match(string text)
     {
         var node = _root;
 
@@ -85,3 +85,4 @@ internal sealed class AhoCorasickMatcher
         }
     }
 }
+

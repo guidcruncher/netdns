@@ -22,7 +22,7 @@ public sealed class RuleEngine
     private readonly Dictionary<string, CompiledRule> _exact = new(StringComparer.OrdinalIgnoreCase);
     private readonly SuffixTrie _suffix = new();
     private readonly PrefixTrie _prefix = new();
-    private readonly GenericAhoCorasickMatcher<CompiledRule> _aho = new();
+    private readonly AhoCorasickMatcher<CompiledRule> _aho = new();
     private readonly List<CompiledRule> _regex = new();
     private readonly List<UpstreamEntry> _fallback = new();
 

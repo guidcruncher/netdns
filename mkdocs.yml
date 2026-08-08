@@ -9,11 +9,11 @@ site_dir: site
 
 theme:
   name: material
-  logo: docs/assets/logo.svg
-  favicon: docs/assets/favicon.svg
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
   palette:
-    primary: 'indigo'
-    accent: 'teal'
+    primary: indigo
+    accent: teal
   features:
     - navigation.instant
 
@@ -22,11 +22,15 @@ plugins:
   - mermaid2
 
 markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
           class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
+          format: !!python/name:mermaid2.fence_mermaid_custom
 
 nav:
   - Home: index.md
@@ -34,22 +38,16 @@ nav:
   - Technical: technical.md
   - Examples: examples.md
   - Configuration examples: configurations.md
-  - Docker Compose: docker-compose.yml
-  - Prometheus config: prometheus.yml
   - Architecture: architecture.md
   - Diagrams:
-    - Diagrams index: diagrams/README.md
-    - Component diagram: diagrams/component.svg
-    - DNS sequence: diagrams/dns-sequence.svg
-    - DHCP sequence: diagrams/dhcp-sequence.svg
-    - NTP sequence: diagrams/ntp-sequence.svg
+      - Diagrams index: diagrams/README.md
+      - Component diagram: diagrams/component.svg
+      - DNS sequence: diagrams/dns-sequence.svg
+      - DHCP sequence: diagrams/dhcp-sequence.svg
+      - NTP sequence: diagrams/ntp-sequence.svg
   - Public DNS: public-dns.json
-
-markdown_extensions:
-  - admonition
-  - codehilite
-  - toc:
-      permalink: true
+  - Docker Compose: docker-compose.md
+  - Prometheus config: prometheus.nd
 
 extra_css:
-  - docs/assets/custom.css
+  - assets/custom.css

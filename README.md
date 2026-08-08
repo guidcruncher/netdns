@@ -8,7 +8,7 @@ DnsForwarder is a lightweight, high-performance DNS forwarder written in .NET. T
 - [usage.md — examples for running and configuring the service](docs/usage.md)
 - [technical.md — architecture, component descriptions, threading and caching behaviour](docs/technical.md)
 - [examples.md — ready-to-run configuration and CLI examples](docs/examples.md)
-- [diagrams.md — architecture and flow diagram](docs/architecture.md)
+- [architecture.md — architecture and flow diagram](docs/architecture.md)
 - [diagrams/README.md — static SVG exports index and viewing instructions](docs/diagrams/README.md)
 
 ## Quick links

@@ -1,5 +1,5 @@
 # Build stage
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /app
 
 COPY ./src ./src
@@ -10,7 +10,7 @@ RUN dotnet restore
 RUN dotnet publish src/DnsForwarder/DnsForwarder.csproj -c Release -o /out
 
 # Runtime stage
-FROM mcr.microsoft.com/dotnet/runtime:8.0
+FROM mcr.microsoft.com/dotnet/runtime:10.0
 WORKDIR /app
 
 COPY --from=build /out .
@@ -20,3 +20,4 @@ EXPOSE 53/udp
 
 # Run DNS forwarder
 ENTRYPOINT ["dotnet", "DnsForwarder.dll"]
+

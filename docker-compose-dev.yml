@@ -13,7 +13,7 @@ services:
 
     # Mount config so you can edit without rebuilding
     volumes:
-      - ./src/DnsForwarder/appsettings.Docker.json:/app/appsettings.json:ro
+      - ./src/DnsForwarder/appsettings.Development.json:/app/appsettings.json:ro
 
     # Optional: run with host networking for maximum performance
     # network_mode: host

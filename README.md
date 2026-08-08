@@ -4,19 +4,19 @@ DnsForwarder is a lightweight, high-performance DNS forwarder written in .NET. T
 
 ## Contents
 
-- [README.md](README.md — this index and quick start)
-- [docs/usage.md](usage.md — examples for running and configuring the service)
-- [docs/technical.md](technical.md — architecture, component descriptions, threading and caching behaviour)
-- [docs/examples.md](examples.md — ready-to-run configuration and CLI examples)
-- [docs/architecture.md](diagrams.md — architecture and flow diagramS)
-- [docs/diagrams/README.md](diagrams/README.md — static SVG exports index and viewing instructions)
+- [README.md — this index and quick start](README.md)
+- [usage.md — examples for running and configuring the service](docs/usage.md)
+- [technical.md — architecture, component descriptions, threading and caching behaviour](docs/technical.md)
+- [examples.md — ready-to-run configuration and CLI examples](docs/examples.md)
+- [diagrams.md — architecture and flow diagram](docs/architecture.md)
+- [diagrams/README.md — static SVG exports index and viewing instructions](docs/diagrams/README.md)
 
 ## Quick links
 
-- [docs/diagrams/README.md](Diagrams)
-- [docs/configurations.md](Configuration examples: configurations.md)
-- [docker-compose.yml](Docker Compose example: docker-compose.yml)
-- [docs/prometheus.md](Prometheus Configuration example)
+- [Diagrams](docs/diagrans/README.md)
+- [Configuration examples: configurations.md](docs/configurations.md)
+- [Docker Compose example: docker-compose.yml](docker-compose.yml)
+- [Prometheus Configuration example](docs/prometheus.md)
 
 ---
 

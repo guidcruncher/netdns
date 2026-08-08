@@ -88,7 +88,7 @@ docker-stop:
 	docker compose -f ./docker-compose.yml stop
 	docker compose -f ./docker-compose.yml rm -f
 
-publish: ## Build the Docker image
+docker-publish: ## Build the Docker image
 	docker buildx build \
 		--file ./Dockerfile \
 		--tag docker.io/guidcruncher/dns-forwarder:latest \
